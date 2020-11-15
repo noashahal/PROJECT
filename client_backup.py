@@ -24,6 +24,8 @@ TIME_SLEEP = 0.1
 WID = 3
 HIGH = 4
 WAIT_KEY = 1
+END = 0
+MAX_CHUNK_SIZE = 10
 
 
 class Client(object):
@@ -155,17 +157,38 @@ class Client(object):
             while cap.isOpened():
                 ret, frame = cap.read()
                 if ret:
-                    self.my_socket.send(code)
+                    self.send_chunk(code)
                     data = frame.tobytes()
                     for i in range(RANGE_START, len(data), BUF):
                         #self.my_socket.send((str(len(data[i:i + BUF])).zfill(FOUR_CHARACTERS)).encode())
-                        self.my_socket.send(i.encode())
-                        self.my_socket.send(data[i:i + BUF])
+                        #self.my_socket.send(str(i).encode())
+                        self.send_chunk(data[i:i + BUF])
                     time.sleep(TIME_SLEEP)
                 else:
                     break
         except ConnectionAbortedError as e:
             self.my_socket.close()
+
+    def send_chunk(self, chunk):
+        """
+        gets chunk and sends to server
+        """
+        length = len(chunk)
+        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + chunk
+        self.my_socket.send(data)
+
+    def receive_chunk(self):
+        """
+        gets chunk from server
+        """
+        raw_chunk_size = self.my_socket.recv(MAX_CHUNK_SIZE)
+        chunk_size = int(raw_chunk_size.decode())
+        left = chunk_size
+        chunk = b''
+        while left > END:
+            chunk += self.my_socket.recv(left)
+            left = left - len(chunk)
+        return chunk
 
     def receive_video(self):
         """
@@ -178,9 +201,7 @@ class Client(object):
                 chunks = []
                 start = False
                 while len(chunks) < num_of_chunks:
-                    #size = int(self.my_socket.recv(FOUR_BYTES).decode())
-                    #chunk = self.my_socket.recv(size)
-                    chunk = self.my_socket.recv(BUF)
+                    chunk = self.receive_chunk()
                     if start:
                         chunks.append(chunk)
                     elif chunk.startswith(code):
