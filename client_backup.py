@@ -198,6 +198,7 @@ class Client(object):
             code = b'start'
             num_of_chunks = WIDTH * HEIGHT * WID / BUF
             while True:
+
                 chunks = []
                 start = False
                 while len(chunks) < num_of_chunks:
