@@ -124,10 +124,13 @@ class Client(object):
         handle the server response
         """
         try:
-            # print("here - handle_server_response_call")
             header = self.my_socket.recv(FOUR_BYTES)
             data = self.my_socket.recv(int(header))
             print(data.decode())  # print data
+            print("enter name: ")
+            name = input()
+            self.send_message_to_server("listening " + str(name))
+            self.handle_server_response_list()
             self.send_video()
         except Exception as e:
             print("Error: handle_server_response", e)
