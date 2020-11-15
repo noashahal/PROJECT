@@ -181,8 +181,14 @@ class Client(object):
         """
         gets chunk from server
         """
-        raw_chunk_size = self.my_socket.recv(MAX_CHUNK_SIZE)
-        chunk_size = int(raw_chunk_size.decode())
+        raw_chunk_size = b''
+        raw_chunk_size_to_get = MAX_CHUNK_SIZE
+        while len(raw_chunk_size) < raw_chunk_size_to_get:
+            raw_chunk_size += self.my_socket.recv(raw_chunk_size_to_get - len(raw_chunk_size))
+        try:
+            chunk_size = int(raw_chunk_size.decode())
+        except:
+            print('raw chunk size is {} its length is {}'.format(raw_chunk_size, len(raw_chunk_size)))
         left = chunk_size
         chunk = b''
         while left > END:
@@ -198,7 +204,6 @@ class Client(object):
             code = b'start'
             num_of_chunks = WIDTH * HEIGHT * WID / BUF
             while True:
-
                 chunks = []
                 start = False
                 while len(chunks) < num_of_chunks:

@@ -122,39 +122,40 @@ class Server(object):
                     print("exception: ", msg)
                     done = True
 
-
     def receive_and_send_video(self, receive_socket, send_socket):
         """
         gets video from client and sends to other client
         doesn't SHOW video
         """
         try:
-            code = b'start'
+            #code = b'start'
             num_of_chunks = WIDTH * HEIGHT * WID / BUF
             num = 0
             while True:
                 chunks = []
-                start = False
+                #start = False
                 while len(chunks) < num_of_chunks:
-                    chunk = self.receive_chunk(receive_socket)
-                    if start:
-                        chunks.append(chunk)
-                    elif chunk.startswith(code):
-                        start = True
+                    num += 1
+                    chunk = self.receive_chunk(receive_socket, num)
+                    self.send_chunk(chunk, send_socket)
+                    #if start:
+                        #chunks.append(chunk)
+                    #elif chunk.startswith(code):
+                        #start = True
 
-                byte_frame = b''.join(chunks)
-                print("got {} chunks. Total len is {}".format(num, len(byte_frame)))
-                frame = np.frombuffer(
-                    byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
+                #byte_frame = b''.join(chunks)
+                #print("got {} chunks. Total len is {}".format(num, len(byte_frame)))
+                #frame = np.frombuffer(
+                    #byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
 
-                data = frame
+                #data = frame
                 # data = byte_frame
-                code = ('start' + (BUF - len(code)) * 'a').encode('utf-8')
-                self.send_chunk(code, send_socket)
-                for i in range(RANGE_START, len(data), BUF):
+                #code = ('start' + (BUF - len(code)) * 'a').encode('utf-8')
+                #self.send_chunk(code, send_socket)
+                #for i in range(RANGE_START, len(data), BUF):
                     #send_socket.send((str(len(data[i:i + BUF])).zfill(FOUR_CHARACTERS)).encode())
-                    self.send_chunk(data[i:i + BUF], send_socket)
-                time.sleep(TIME_SLEEP)
+                    #self.send_chunk(data[i:i + BUF], send_socket)
+                #time.sleep(TIME_SLEEP)
         except ConnectionAbortedError as e:
             receive_socket.close()
 
@@ -168,12 +169,19 @@ class Server(object):
         send_socket.send(data)
 
     @staticmethod
-    def receive_chunk(receive_socket):
+    def receive_chunk(receive_socket, num):
         """
         gets chunk from server
         """
-        raw_chunk_size = receive_socket.recv(MAX_CHUNK_SIZE)
-        chunk_size = int(raw_chunk_size.decode())
+        raw_chunk_size = b''
+        raw_chunk_size_to_get = MAX_CHUNK_SIZE
+        while len(raw_chunk_size) < raw_chunk_size_to_get:
+            raw_chunk_size += receive_socket.recv(raw_chunk_size_to_get - len(raw_chunk_size))
+        try:
+            chunk_size = int(raw_chunk_size.decode())
+        except:
+            print('raw chunk size is {} its length is {}'.format(raw_chunk_size, len(raw_chunk_size)))
+        #print("chunk num {} size: {}".format(num, raw_chunk_size))
         left = chunk_size
         chunk = b''
         while left > END:
