@@ -36,18 +36,18 @@ class Client(object):
         """
         constructor -- gets ip and port -- initiate server socket
         """
+        # self.my_socket = self.initiate_client_socket(ip, port)
         #ip, port = self.registry_values()
         self.receive_socket = None
+        self.initiate_socket(ip, port, "listening")
         self.send_socket = None
-        print("Enter name: ")
-        self.my_name = str(input())
-        self.initiate_threading(ip, port)
-        #self.initiate_socket(ip, port)
+        self.initiate_socket(ip, port, "call")
+        self.my_name = "noa"
+        self.call_name = "amir"
 
-    @staticmethod
-    def registry_values():
+    def registry_values(self):
         """
-        #gets server ip and port from registry
+        gets server ip and port from registry
         """
         ip = ""
         port = 0
@@ -67,20 +67,7 @@ class Client(object):
         CloseKey(raw_key)
         return ip, port
 
-    def initiate_threading(self, ip, port):
-        """
-        starts 2 threads, each with separate socket
-        one for receiving one for sending
-        """
-        mes = "listening"
-        receive_thread = threading.Thread(target=self.initiate_socket, args=(ip, port, mes, ))
-        receive_thread.start()
-        print("Calling: ")
-        mes = "call" + str(input())
-        receive_thread = threading.Thread(target=self.initiate_socket, args=(ip, port, mes, ))
-        receive_thread.start()
-
-    def initiate_socket(self, ip, port, mes):
+    def initiate_socket(self, ip, port, kind):
         """
         connect client socket
         """
@@ -91,80 +78,24 @@ class Client(object):
             print("ip =", ip)
             print("port =", port)
             sock.connect((ip,  port))
-            if mes.startswith("listening"):
-                self.receive_socket = sock
-                self.receive_socket_message(mes, self.receive_socket)
-            elif mes.startswith("call"):
+            if kind == "call":
                 self.send_socket = sock
-                self.receive_socket_message(mes, self.send_socket)
+                self.send_chunk(kind.encode() + " " + self.call_name.encode(), self.send_socket)
+                mes = self.receive_mes(self.send_socket)
+                print(mes)
+                send_thread = threading.Thread(target=self.send_video, args=(self.send_socket, ))
+                send_thread.start()
+            else:
+                self.receive_socket = sock
+                self.send_chunk(kind.encode() + " " + self.my_name.encode(), self.receive_socket)
+                mes = self.receive_mes(self.receive_socket)
+                print(mes)
+                receive_thread = threading.Thread(target=self.receive_video, args=(self.receive_socket, ))
+                receive_thread.start()
 
         except Exception as e:
-            print("Error initiate_client_socket", e)
+            print("Error initate_client_socket", e)
             exit()
-
-    def receive_socket_message(self, mes, sock):
-        """
-        sends listening and gets messages from server
-        """
-        #print("enter message: listening + name / call + name")
-        #mes = input()
-        self.send_message_to_server(mes, sock)
-
-        if mes.startswith("listening"):
-            self.handle_server_response_list()
-
-        # if wants to send to different client
-        elif mes.startswith("call"):
-            self.handle_server_response_call()
-
-        # if invalid - not send to or listening
-        else:
-            self.send_message_to_server("invalid request", sock)
-
-        # while True:
-            # header = self.my_socket.recv(FOUR_BYTES)
-            # data = self.my_socket.recv(int(header))
-            # print(data.decode())  # print data
-
-    def handle_server_response_list(self):
-        """
-        handle the server response
-        """
-        try:
-            header = self.receive_socket.recv(FOUR_BYTES)
-            data = self.receive_socket.recv(int(header))
-            print(data.decode())  # print data
-            self.receive_video()
-        except Exception as e:
-            print("Error: handle_server_response", e)
-            self.send_message_to_server('close', self.receive_socket)  #
-
-    def handle_server_response_call(self):
-        """
-        handle the server response
-        """
-        try:
-            header = self.send_socket.recv(FOUR_BYTES)
-            data = self.send_socket.recv(int(header))
-            print(data.decode())  # print data
-            print("enter name: ")
-            name = input()
-            self.send_message_to_server("listening " + str(name), self.send_socket)
-            self.handle_server_response_list()
-            self.send_video()
-        except Exception as e:
-            print("Error: handle_server_response", e)
-            self.send_message_to_server('close', self.send_socket)
-
-    def send_message_to_server(self, mes, sock):
-        """
-        send the request to the server
-        """
-        try:
-            size = (str(len(mes.encode())).zfill(FOUR_CHARACTERS)).encode()
-            sock.send(size + mes.encode())
-        except Exception as e:
-            print ("Error send_request_to_server:", e)
 
     def send_video(self):
         """
@@ -180,25 +111,26 @@ class Client(object):
             while cap.isOpened():
                 ret, frame = cap.read()
                 if ret:
-                    self.send_chunk(code)
+                    self.send_chunk(code, self.send_socket)
                     data = frame.tobytes()
                     for i in range(RANGE_START, len(data), BUF):
                         #self.my_socket.send((str(len(data[i:i + BUF])).zfill(FOUR_CHARACTERS)).encode())
                         #self.my_socket.send(str(i).encode())
-                        self.send_chunk(data[i:i + BUF])
+                        self.send_chunk(data[i:i + BUF], self.send_socket)
                     time.sleep(TIME_SLEEP)
                 else:
                     break
         except ConnectionAbortedError as e:
             self.send_socket.close()
 
-    def send_chunk(self, chunk):
+    @staticmethod
+    def send_chunk(chunk, sock):
         """
         gets chunk and sends to server
         """
         length = len(chunk)
         data = str(length).zfill(MAX_CHUNK_SIZE).encode() + chunk
-        self.send_socket.send(data)
+        sock.send(data)
 
     def receive_chunk(self):
         """
@@ -251,6 +183,23 @@ class Client(object):
             self.receive_socket.close()
             cv.destroyAllWindows()
             print ("Error send_request_to_server:", e)
+
+    @staticmethod
+    def receive_mes(sock):
+        """
+        receives and returns message from client
+        """
+        try:
+            raw_data = sock.recv(MAX_CHUNK_SIZE)
+            data = raw_data.decode()
+            mes = "invalid message"
+            if data.isdigit():
+                mes = sock.recv(int(data)).decode()
+                mes = str(mes)
+            return mes
+        except Exception as e:
+            sock.close()
+            print("Error receive_mes: ", e)
 
 
 def main():

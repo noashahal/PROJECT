@@ -52,39 +52,25 @@ class Server(object):
         while data != '' and data != 'close':
             try:
                 # receiving data
-                raw_data = client_socket.recv(MSG_LEN)
-                data = raw_data.decode()
-                if data.isdigit():
-                    mes = client_socket.recv(int(data)).decode()
+                mes = self.receive_mes(client_socket)
+                # adds a listening socket
+                if mes.startswith("listening"):
+                    self.client_dict[mes.split(' ')[GET_CLIENT_NAME]] \
+                        = client_socket
+                    # print(self.client_dict)
+                    self.send_mes("listening socket added", client_socket)
+                    mes = self.receive_mes(client_socket)
 
-                    # adds a listening socket
-                    if mes.startswith("listening"):
-                        self.client_dict[mes.split(' ')[GET_CLIENT_NAME]] \
-                            = client_socket
-                        # print(self.client_dict)
-                        self.send_mes("listening socket added", client_socket)
-
-                    # if wants to send to different client
-                    elif mes.startswith("call"):
-                        client_name = mes.split(" ")[GET_CLIENT_NAME]
-                        # print("you're calling: "+client_name)
-                        send_socket = self.client_dict[client_name]
-                        self.send_mes("calling", client_socket)
-                        #raw_data = client_socket.recv(MSG_LEN)
-                        #data = int(raw_data.decode())
-                        #mes = str(client_socket.recv(data).decode())
-                        #self.client_dict[mes.split(' ')[GET_CLIENT_NAME]] \
-                            #= client_socket
-                        #print(self.client_dict)
-                        #self.send_mes("listening socket added", client_socket)
-                        self.receive_and_send_video(client_socket, send_socket)
-
-                    # if invalid - not send to or listening
-                    else:
-                        self.send_mes("unvalid request", client_socket)
+                # if wants to send to different client
+                if mes.startswith("call"):
+                    client_name = mes.split(" ")[GET_CLIENT_NAME]
+                    # print("you're calling: "+client_name)
+                    send_socket = self.client_dict[client_name]
+                    self.send_mes("calling", client_socket)
+                    self.receive_and_send_video(client_socket, send_socket)
 
                 else:
-                    print("received illegal size: ", raw_data)
+                    print("received illegal message: ", mes)
                     mes = "error"
                     self.send_mes(mes, client_socket)
                     break
@@ -102,7 +88,7 @@ class Server(object):
         receives and sends message
         """
         message = message.encode()
-        size = (str(len(message)).zfill(MSG_LEN)).encode()
+        size = (str(len(message)).zfill(MAX_CHUNK_SIZE)).encode()
         send_socket.send(size + message)
 
     def handle_clients(self):
@@ -195,6 +181,23 @@ class Server(object):
             chunk += receive_socket.recv(left)
             left = left - len(chunk)
         return chunk
+
+    @staticmethod
+    def receive_mes(client_socket):
+        """
+        receives and returns message from client
+        """
+        try:
+            raw_data = client_socket.recv(MAX_CHUNK_SIZE)
+            data = raw_data.decode()
+            mes = "invalid message"
+            if data.isdigit():
+                mes = client_socket.recv(int(data)).decode()
+                mes = str(mes)
+            return mes
+        except Exception as e:
+            client_socket.close()
+            print("Error in receive_mes: ", e)
 
 
 def main():
