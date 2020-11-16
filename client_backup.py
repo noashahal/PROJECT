@@ -80,17 +80,17 @@ class Client(object):
             sock.connect((ip,  port))
             if kind == "call":
                 self.send_socket = sock
-                self.send_chunk(kind.encode() + " " + self.call_name.encode(), self.send_socket)
+                self.send_chunk(kind.encode() + b" amir", self.send_socket)
                 mes = self.receive_mes(self.send_socket)
                 print(mes)
-                send_thread = threading.Thread(target=self.send_video, args=(self.send_socket, ))
+                send_thread = threading.Thread(target=self.send_video)
                 send_thread.start()
             else:
                 self.receive_socket = sock
-                self.send_chunk(kind.encode() + " " + self.my_name.encode(), self.receive_socket)
+                self.send_chunk(kind.encode() + b" noa", self.receive_socket)
                 mes = self.receive_mes(self.receive_socket)
                 print(mes)
-                receive_thread = threading.Thread(target=self.receive_video, args=(self.receive_socket, ))
+                receive_thread = threading.Thread(target=self.receive_video)
                 receive_thread.start()
 
         except Exception as e:

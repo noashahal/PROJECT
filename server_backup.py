@@ -59,6 +59,7 @@ class Server(object):
                         = client_socket
                     # print(self.client_dict)
                     self.send_mes("listening socket added", client_socket)
+                    print("here: "+mes)
                     mes = self.receive_mes(client_socket)
 
                 # if wants to send to different client
