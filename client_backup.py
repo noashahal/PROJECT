@@ -36,14 +36,18 @@ class Client(object):
         """
         constructor -- gets ip and port -- initiate server socket
         """
-        # self.my_socket = self.initiate_client_socket(ip, port)
         #ip, port = self.registry_values()
-        self.my_socket = None
-        self.initiate_socket(ip, port)
+        self.receive_socket = None
+        self.send_socket = None
+        print("Enter name: ")
+        self.my_name = str(input())
+        self.initiate_threading(ip, port)
+        #self.initiate_socket(ip, port)
 
-    def registry_values(self):
+    @staticmethod
+    def registry_values():
         """
-        gets server ip and port from registry
+        #gets server ip and port from registry
         """
         ip = ""
         port = 0
@@ -63,7 +67,20 @@ class Client(object):
         CloseKey(raw_key)
         return ip, port
 
-    def initiate_socket(self, ip, port):
+    def initiate_threading(self, ip, port):
+        """
+        starts 2 threads, each with separate socket
+        one for receiving one for sending
+        """
+        mes = "listening"
+        receive_thread = threading.Thread(target=self.initiate_socket, args=(ip, port, mes, ))
+        receive_thread.start()
+        print("Calling: ")
+        mes = "call" + str(input())
+        receive_thread = threading.Thread(target=self.initiate_socket, args=(ip, port, mes, ))
+        receive_thread.start()
+
+    def initiate_socket(self, ip, port, mes):
         """
         connect client socket
         """
@@ -74,21 +91,24 @@ class Client(object):
             print("ip =", ip)
             print("port =", port)
             sock.connect((ip,  port))
-            self.my_socket = sock
-            receive_thread = threading.Thread(target=self.receive_socket_message)
-            receive_thread.start()
+            if mes.startswith("listening"):
+                self.receive_socket = sock
+                self.receive_socket_message(mes, self.receive_socket)
+            elif mes.startswith("call"):
+                self.send_socket = sock
+                self.receive_socket_message(mes, self.send_socket)
 
         except Exception as e:
-            print("Error initate_client_socket", e)
+            print("Error initiate_client_socket", e)
             exit()
 
-    def receive_socket_message(self):
+    def receive_socket_message(self, mes, sock):
         """
         sends listening and gets messages from server
         """
-        print("enter message: listening + name / call + name")
-        mes = input()
-        self.send_message_to_server(mes)
+        #print("enter message: listening + name / call + name")
+        #mes = input()
+        self.send_message_to_server(mes, sock)
 
         if mes.startswith("listening"):
             self.handle_server_response_list()
@@ -99,7 +119,7 @@ class Client(object):
 
         # if invalid - not send to or listening
         else:
-            self.send_message_to_server("invalid request")
+            self.send_message_to_server("invalid request", sock)
 
         # while True:
             # header = self.my_socket.recv(FOUR_BYTES)
@@ -111,38 +131,38 @@ class Client(object):
         handle the server response
         """
         try:
-            header = self.my_socket.recv(FOUR_BYTES)
-            data = self.my_socket.recv(int(header))
+            header = self.receive_socket.recv(FOUR_BYTES)
+            data = self.receive_socket.recv(int(header))
             print(data.decode())  # print data
             self.receive_video()
         except Exception as e:
             print("Error: handle_server_response", e)
-            self.send_message_to_server('close')  #
+            self.send_message_to_server('close', self.receive_socket)  #
 
     def handle_server_response_call(self):
         """
         handle the server response
         """
         try:
-            header = self.my_socket.recv(FOUR_BYTES)
-            data = self.my_socket.recv(int(header))
+            header = self.send_socket.recv(FOUR_BYTES)
+            data = self.send_socket.recv(int(header))
             print(data.decode())  # print data
             print("enter name: ")
             name = input()
-            self.send_message_to_server("listening " + str(name))
+            self.send_message_to_server("listening " + str(name), self.send_socket)
             self.handle_server_response_list()
             self.send_video()
         except Exception as e:
             print("Error: handle_server_response", e)
-            self.send_message_to_server('close')
+            self.send_message_to_server('close', self.send_socket)
 
-    def send_message_to_server(self, mes):
+    def send_message_to_server(self, mes, sock):
         """
         send the request to the server
         """
         try:
             size = (str(len(mes.encode())).zfill(FOUR_CHARACTERS)).encode()
-            self.my_socket.send(size + mes.encode())
+            sock.send(size + mes.encode())
         except Exception as e:
             print ("Error send_request_to_server:", e)
 
@@ -170,7 +190,7 @@ class Client(object):
                 else:
                     break
         except ConnectionAbortedError as e:
-            self.my_socket.close()
+            self.send_socket.close()
 
     def send_chunk(self, chunk):
         """
@@ -178,7 +198,7 @@ class Client(object):
         """
         length = len(chunk)
         data = str(length).zfill(MAX_CHUNK_SIZE).encode() + chunk
-        self.my_socket.send(data)
+        self.send_socket.send(data)
 
     def receive_chunk(self):
         """
@@ -187,7 +207,7 @@ class Client(object):
         raw_chunk_size = b''
         raw_chunk_size_to_get = MAX_CHUNK_SIZE
         while len(raw_chunk_size) < raw_chunk_size_to_get:
-            raw_chunk_size += self.my_socket.recv(raw_chunk_size_to_get - len(raw_chunk_size))
+            raw_chunk_size += self.receive_socket.recv(raw_chunk_size_to_get - len(raw_chunk_size))
         try:
             chunk_size = int(raw_chunk_size.decode())
         except:
@@ -195,7 +215,7 @@ class Client(object):
         left = chunk_size
         chunk = b''
         while left > END:
-            chunk += self.my_socket.recv(left)
+            chunk += self.receive_socket.recv(left)
             left = left - len(chunk)
         return chunk
 
@@ -224,11 +244,11 @@ class Client(object):
                 if cv.waitKey(WAIT_KEY) & 0xFF == ord('q'):
                     break
 
-            self.my_socket.close()
+            self.receive_socket.close()
             cv.destroyAllWindows()
 
         except Exception as e:
-            self.my_socket.close()
+            self.receive_socket.close()
             cv.destroyAllWindows()
             print ("Error send_request_to_server:", e)
 

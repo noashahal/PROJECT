@@ -50,46 +50,52 @@ class Server(object):
         """ thread function which handles a single client  in a loop """
         data = None
         while data != '' and data != 'close':
-            #try:
-            # receiving data
-            raw_data = client_socket.recv(MSG_LEN)
-            data = raw_data.decode()
-            if data.isdigit():
-                mes = client_socket.recv(int(data)).decode()
+            try:
+                # receiving data
+                raw_data = client_socket.recv(MSG_LEN)
+                data = raw_data.decode()
+                if data.isdigit():
+                    mes = client_socket.recv(int(data)).decode()
 
-                # adds a listening socket
-                if mes.startswith("listening"):
-                    self.client_dict[mes.split(' ')[GET_CLIENT_NAME]] \
-                        = client_socket
-                    # print(self.client_dict)
-                    self.send_mes("listening socket added", client_socket)
+                    # adds a listening socket
+                    if mes.startswith("listening"):
+                        self.client_dict[mes.split(' ')[GET_CLIENT_NAME]] \
+                            = client_socket
+                        # print(self.client_dict)
+                        self.send_mes("listening socket added", client_socket)
 
-                # if wants to send to different client
-                elif mes.startswith("call"):
-                    client_name = mes.split(" ")[GET_CLIENT_NAME]
-                    # print("you're calling: "+client_name)
-                    send_socket = self.client_dict[client_name]
-                    self.send_mes("calling", client_socket)
-                    self.receive_and_send_video(client_socket, send_socket)
+                    # if wants to send to different client
+                    elif mes.startswith("call"):
+                        client_name = mes.split(" ")[GET_CLIENT_NAME]
+                        # print("you're calling: "+client_name)
+                        send_socket = self.client_dict[client_name]
+                        self.send_mes("calling", client_socket)
+                        #raw_data = client_socket.recv(MSG_LEN)
+                        #data = int(raw_data.decode())
+                        #mes = str(client_socket.recv(data).decode())
+                        #self.client_dict[mes.split(' ')[GET_CLIENT_NAME]] \
+                            #= client_socket
+                        #print(self.client_dict)
+                        #self.send_mes("listening socket added", client_socket)
+                        self.receive_and_send_video(client_socket, send_socket)
 
-                # if invalid - not send to or listening
+                    # if invalid - not send to or listening
+                    else:
+                        self.send_mes("unvalid request", client_socket)
+
                 else:
-                    self.send_mes("unvalid request", client_socket)
+                    print("received illegal size: ", raw_data)
+                    mes = "error"
+                    self.send_mes(mes, client_socket)
+                    break
 
-            else:
-                print("received illegal size: ", raw_data)
-                mes = "error"
-                self.send_mes(mes, client_socket)
+            except socket.error as msg:
+                print("socket failure: ", msg)
                 break
-    """
-            # data = data.upper()
-        except socket.error as msg:
-            print("socket failure: ", msg)
-            break
-        except Exception as msg:
-            print("exception!: ", msg)
-            break
-        """
+            except Exception as msg:
+                print("exception!: ", msg)
+                break
+
     @staticmethod
     def send_mes(message, send_socket):
         """
@@ -127,6 +133,7 @@ class Server(object):
         gets video from client and sends to other client
         doesn't SHOW video
         """
+        print("got to receive and send video")
         try:
             #code = b'start'
             num_of_chunks = WIDTH * HEIGHT * WID / BUF
