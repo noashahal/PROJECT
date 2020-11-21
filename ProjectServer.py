@@ -76,11 +76,11 @@ class Server(object):
                     elif mes.startswith("call"):
                         client_name = mes.split(" ")[GET_CLIENT_NAME]
                         # print("you're calling: "+client_name)
-                        send_socket = self.client_dict[client_name]
+                        send_video_socket = self.client_dict[client_name]
                         self.send_mes("calling", client_socket)
                         # receives and sends video both ways
-                        self.receive_and_send_video(client_socket, send_socket)
-                        self.receive_and_send_video(send_socket, receive_socket)
+                        self.receive_and_send_video(client_socket, send_video_socket)
+                        self.receive_and_send_video(send_video_socket, receive_video_socket)
 
                     # if invalid - not send to or listening
                     else:
@@ -101,13 +101,13 @@ class Server(object):
                 break
 
     @staticmethod
-    def send_mes(message, send_socket):
+    def send_mes(message, send_video_socket):
         """
         receives and sends message
         """
         message = message.encode()
         size = (str(len(message)).zfill(MSG_LEN)).encode()
-        send_socket.send(size + message)
+        send_video_socket.send(size + message)
 
     def handle_clients(self):
         """
@@ -133,7 +133,7 @@ class Server(object):
                 done = True
 
     @staticmethod
-    def receive_and_send_video(receive_socket, send_socket):
+    def receive_and_send_video(receive_video_socket, send_video_socket):
         """
         gets video from client and sends to other client
         doesn't SHOW video
@@ -145,7 +145,7 @@ class Server(object):
                 chunks = []
                 start = False
                 while len(chunks) < num_of_chunks:
-                    chunk = receive_socket.recv(BUF)
+                    chunk = receive_video_socket.recv(BUF)
                     if start:
                         chunks.append(chunk)
                     elif chunk.startswith(code):
@@ -156,12 +156,12 @@ class Server(object):
                     byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
                 data = frame
                 code = ('start' + (BUF - len(code)) * 'a').encode('utf-8')
-                send_socket.send(code)
+                send_video_socket.send(code)
                 for i in range(RANGE_START, len(data), BUF):
-                    send_socket.send(data[i:i + BUF])
+                    send_video_socket.send(data[i:i + BUF])
                 time.sleep(TIME_SLEEP)
         except ConnectionAbortedError as e:
-            receive_socket.close()
+            receive_video_socket.close()
 
 
 def main():
