@@ -93,7 +93,7 @@ class Client(object):
         sends video to server
         """
         self.send_video_socket = self.start_socket(IP, SEND_VIDEO_PORT)
-        self.send_chunk(self.call_name, self.receive_video_socket)
+        self.send_chunk(self.call_name.encode(), self.receive_video_socket)
         print(self.receive_mes(self.send_video_socket))
         # print("here send")
         cap = cv.VideoCapture(CAPTURE)
@@ -117,12 +117,12 @@ class Client(object):
             self.send_video_socket.close()
 
     @staticmethod
-    def send_chunk(chunk, sock):
+    def send_chunk(chnk, sock):
         """
         gets chunk and sends to server
         """
-        length = len(chunk)
-        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + chunk
+        length = len(chnk)
+        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + chnk
         sock.send(data)
 
     def receive_chunk(self):
@@ -151,7 +151,7 @@ class Client(object):
         receives and shows video from server
         """
         self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
-        self.send_chunk(self.my_name, self.receive_video_socket)
+        self.send_chunk(self.my_name.encode(), self.receive_video_socket)
         print(self.receive_mes(self.receive_video_socket))
         try:
             code = b'start'
@@ -221,7 +221,7 @@ class Client(object):
         receives and plays audio
         """
         self.receive_audio_socket = self.start_socket(IP, RECEIVE_AUDIO_PORT)
-        self.send_chunk(self.my_name, self.receive_audio_socket)
+        self.send_chunk(self.my_name.encode(), self.receive_audio_socket)
         print(self.receive_mes(self.receive_audio_socket))
         p_receive = pyaudio.PyAudio()
         stream_receive = p_receive.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True,
@@ -246,7 +246,7 @@ class Client(object):
         records and sends audio to server
         """
         self.send_audio_socket = self.start_socket(IP, SEND_AUDIO_PORT)
-        self.send_chunk(self.call_name, self.receive_video_socket)
+        self.send_chunk(self.call_name.encode(), self.receive_video_socket)
         print(self.receive_mes(self.send_audio_socket))
         p_send = pyaudio.PyAudio()  # Create an interface to PortAudio
         print('Recording...')
@@ -270,7 +270,7 @@ def main():
     """
     check my methods
     """
-    client = Client(IP)
+    client = Client()
 
 
 if __name__ == '__main__':
