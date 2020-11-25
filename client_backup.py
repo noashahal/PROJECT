@@ -1,4 +1,3 @@
-import socket
 import sys
 import threading
 import socket
@@ -7,6 +6,7 @@ import cv2 as cv
 import time
 from winreg import *
 from constants import *
+import pyaudio
 
 
 class Client(object):

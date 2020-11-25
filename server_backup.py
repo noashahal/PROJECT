@@ -1,4 +1,3 @@
-import socket
 import threading
 import sys
 import socket
@@ -8,7 +7,6 @@ import time
 FOUR_BYTES = 4
 EXIT = -1
 LISTEN = 10
-MSG_LEN = 4
 IP = '0.0.0.0'
 PORT = 2134
 GET_CLIENT_NAME = 1
@@ -40,10 +38,10 @@ class Server(object):
             self.server_socket.listen(LISTEN)
             self.client_dict = {}
         except socket.error as e:
-            print("booz!!", e)
+            print("socket creation fail: ", e)
             sys.exit(EXIT)
         except Exception as e:
-            print("booz!!!", e)
+            print("server construct fail: ", e)
             sys.exit(EXIT)
 
     def handle_single_client(self, client_socket):
@@ -128,12 +126,10 @@ class Server(object):
         print("got to receive and send video")
         try:
             num_of_chunks = WIDTH * HEIGHT * WID / BUF
-            num = 0
             while True:
                 chunks = []
                 while len(chunks) < num_of_chunks:
-                    num += 1
-                    chunk = self.receive_chunk(receive_video_socket, num)
+                    chunk = self.receive_chunk(receive_video_socket)
                     self.send_chunk(chunk, send_video_socket)
 
         except ConnectionAbortedError as e:
@@ -149,7 +145,7 @@ class Server(object):
         send_video_socket.send(data)
 
     @staticmethod
-    def receive_chunk(receive_video_socket, num):
+    def receive_chunk(receive_video_socket):
         """
         gets chunk from server
         """
@@ -161,7 +157,6 @@ class Server(object):
             chunk_size = int(raw_chunk_size.decode())
         except:
             print('raw chunk size is {} its length is {}'.format(raw_chunk_size, len(raw_chunk_size)))
-        # print("chunk num {} size: {}".format(num, raw_chunk_size))
         left = chunk_size
         chunk = b''
         while left > END:
