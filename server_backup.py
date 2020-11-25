@@ -4,14 +4,18 @@ import socket
 import numpy as np
 import cv2 as cv
 import time
+import pyaudio
 FOUR_BYTES = 4
 EXIT = -1
 LISTEN = 10
 IP = '0.0.0.0'
-PORT = 2134
+SEND_VIDEO_PORT = 1113
+RECEIVE_VIDEO_PORT = 1114
+SEND_AUDIO_PORT = 1112
+RECEIVE_AUDIO_PORT = 1111
 GET_CLIENT_NAME = 1
 SOCKET_IN_MESSAGE = 1
-BUF = 512
+BUF = 512  # size of video chunk
 WIDTH = 640
 HEIGHT = 480
 RANGE_START = 0
@@ -21,7 +25,8 @@ WID = 3
 HIGH = 4
 WAIT_KEY = 1
 END = 0
-MAX_CHUNK_SIZE = 10
+MAX_CHUNK_SIZE = 10  # for zfill - len of messages
+CHUNK = 1024
 
 
 class Server(object):
@@ -29,14 +34,12 @@ class Server(object):
         """ constructor"""
         self.server_socket = None
         try:
-            # initiating server socket
-            self.server_socket = socket.socket(
-                socket.AF_INET, socket.SOCK_STREAM)
-            # the server binds itself to a certain socket
-            self.server_socket.bind((IP, PORT))
-            # listening to the socket
-            self.server_socket.listen(LISTEN)
-            self.client_dict = {}
+            self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
+            self.send_video_socket = self.start_socket(IP, SEND_VIDEO_PORT)
+            self.receive_audio_socket = self.start_socket(IP, RECEIVE_AUDIO_PORT)
+            self.send_audio_socket = self.start_socket(IP, SEND_AUDIO_PORT)
+            self.client_video_dict = {}
+            self.client_audio_dict = {}
         except socket.error as e:
             print("socket creation fail: ", e)
             sys.exit(EXIT)
@@ -44,47 +47,18 @@ class Server(object):
             print("server construct fail: ", e)
             sys.exit(EXIT)
 
-    def handle_single_client(self, client_socket):
-        """ thread function which handles a single client  in a loop """
-        mes = None
-        while mes != '' and mes != 'close':
-            try:
-                # receiving data
-                mes = self.receive_mes(client_socket)
-                # adds a listening socket
-                if mes.startswith("listening"):
-                    self.client_dict[mes.split(' ')[GET_CLIENT_NAME]] \
-                        = client_socket
-                    print("client dict is: {}".format(self.client_dict))
-                    self.send_mes("listening socket added", client_socket)
-                    print("Sent message: "+mes)
-                    mes = self.receive_mes(client_socket)
-                    print("Rcvd message: " + mes)
-
-                # if wants to send to different client
-                if mes.startswith("call"):
-                    client_name = mes.split(" ")[GET_CLIENT_NAME]
-                    mes = "error here " + mes
-                    print("you're calling: "+client_name)
-                    while client_name not in self.client_dict:
-                        time.sleep(TIME_SLEEP)
-                        print("waiting for other client to be added to dict")
-                    send_video_socket = self.client_dict[client_name]
-                    self.send_mes("calling", client_socket)
-                    self.receive_and_send_video(client_socket, send_video_socket)
-
-                else:
-                    print("received illegal message: ", mes)
-                    mes = "error"
-                    self.send_mes(mes, client_socket)
-                    break
-
-            except socket.error as msg:
-                print("socket failure: ", msg)
-                break
-            except Exception as msg:
-                print("exception!: ", msg)
-                break
+    @staticmethod
+    def start_socket(ip, port):
+        """
+        starts a socket with ip and port
+        """
+        sock = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
+        # the server binds itself to a certain socket
+        sock.bind((ip, port))
+        # listening to the socket
+        sock.listen(LISTEN)
+        return sock
 
     @staticmethod
     def send_mes(message, send_video_socket):
@@ -104,12 +78,15 @@ class Server(object):
         done = False
         while not done:
             try:
-                # accepting a connect request
-                client_socket, address = self.server_socket.accept()
-                print("client accepted")
-                clnt_thread = threading.Thread(
-                    target=self.handle_single_client, args=(client_socket,))
-                clnt_thread.start()
+                # starts threads
+                send_video_thread = threading.Thread(target=self.start_video_relay())
+                send_video_thread.start()
+                send_audio_thread = threading.Thread(target=self.start_audio_relay())
+                send_audio_thread.start()
+                receive_video_thread = threading.Thread(target=self.receive_video())
+                receive_video_thread.start()
+                receive_audio_thread = threading.Thread(target=self.receive_audio())
+                receive_audio_thread.start()
 
             except socket.error as msg:
                 print("socket failure: ", msg)
@@ -117,6 +94,58 @@ class Server(object):
             except Exception as msg:
                 print("exception: ", msg)
                 done = True
+
+    def start_video_relay(self):
+        """
+        connects receive video socket,
+        gets name
+        calls receive_and_send_video with names socket
+        """
+        receive_video_client_socket, address = self.receive_video_socket.accept()
+        name = self.receive_mes(receive_video_client_socket)
+        while name not in self.client_video_dict:
+            time.sleep(TIME_SLEEP)
+            print("waiting for the other client to connect")
+        send_sock = self.client_video_dict[name]
+        self.send_chunk("calling", receive_video_client_socket)
+        self.receive_and_send_video(receive_video_client_socket, send_sock)
+
+    def start_audio_relay(self):
+        """
+        connects receive audio socket,
+        gets name
+        calls receive_and_send_audio with names socket
+        """
+        receive_audio_client_socket, address = self.receive_audio_socket.accept()
+        name =  self.receive_mes(receive_audio_client_socket)
+        while name not in self.client_audio_dict:
+            time.sleep(TIME_SLEEP)
+            print("waiting for the other client to connect")
+        send_sock = self.client_audio_dict[name]
+        self.send_chunk("calling", receive_audio_client_socket)
+        self.receive_and_send_audio(receive_audio_client_socket, send_sock)
+
+    def receive_video(self):
+        """
+        connects send video socket,
+        gets name
+        adds name to dictionary
+        """
+        send_video_client_socket, address = self.send_video_socket.accept()
+        my_name = self.receive_mes(send_video_client_socket)
+        self.client_video_dict[my_name] = send_video_client_socket
+        self.send_chunk("listening vid", send_video_client_socket)
+
+    def receive_audio(self):
+        """
+        connects send video socket,
+        gets name
+        adds name to dictionary
+        """
+        send_audio_client_socket, address = self.send_audio_socket.accept()
+        my_name = self.receive_mes(send_audio_client_socket)
+        self.client_audio_dict[my_name] = send_audio_client_socket
+        self.send_chunk("listening audio", send_audio_client_socket)
 
     def receive_and_send_video(self, receive_video_socket, send_video_socket):
         """
@@ -136,13 +165,35 @@ class Server(object):
             receive_video_socket.close()
 
     @staticmethod
-    def send_chunk(chunk, send_video_socket):
+    def receive_and_send_audio(receive_audio_socket, send_audio_socket):
+        """
+        gets audio chunk from one client, sends to other client
+        without playing audio!
+        different stream for sending and receiving!
+        """
+        i = 0
+        try:
+            while True:
+                i += 1
+                data = receive_audio_socket.recv(CHUNK)
+                print("got chunk number {} of length {}".format(i, len(data)))
+                #if len(data) == 0:
+                    #break
+                send_audio_socket.send(data)
+        except KeyboardInterrupt:
+            pass
+        print('Shutting down')
+        receive_audio_socket.close()
+        send_audio_socket.close()
+
+    @staticmethod
+    def send_chunk(chunk, send_socket):
         """
         gets chunk and sends to server
         """
         length = len(chunk)
         data = str(length).zfill(MAX_CHUNK_SIZE).encode() + chunk
-        send_video_socket.send(data)
+        send_socket.send(data)
 
     @staticmethod
     def receive_chunk(receive_video_socket):

@@ -5,25 +5,51 @@ import numpy as np
 import cv2 as cv
 import time
 from winreg import *
-from constants import *
+#from constants import *
 import pyaudio
+VALUES_COUNT = 2
+IP = "127.0.0.1"  # IP ADDRESS
+SEND_VIDEO_PORT = 1114
+RECEIVE_VIDEO_PORT = 1113
+SEND_AUDIO_PORT = 1111
+RECEIVE_AUDIO_PORT = 1112
+TEN_LISTENERS = 10  # AMOUNT OF LISTENERS
+FOUR_BYTES = 4  # for self.my_socket.recv
+PARTS = 1024
+HEADER_LENGTH = 4
+BUF = 512
+WIDTH = 640
+HEIGHT = 480
+RANGE_START = 0
+CAPTURE = 0
+TIME_SLEEP = 0.1
+WID = 3
+HIGH = 4
+WAIT_KEY = 1
+END = 0
+MAX_CHUNK_SIZE = 10  # for zfill - len of messages
+FORMAT = pyaudio.paInt16  # audio format
+CHANNELS = 2  # num of channels for audio
+RATE = 44100  # audio send rate
+chunk = CHUNK = 1024  # audio chunk size
 
 
 class Client(object):
     """
     class client Todo: write more
     """
-    def __init__(self, ip, port):
+    def __init__(self):
         """
-        constructor -- gets ip and port -- initiate both sockets
+        todo: comment
         """
         # ip, port = self.registry_values()
         self.receive_video_socket = None
-        self.connect_to_server(ip, port, "listening")
         self.send_video_socket = None
-        self.connect_to_server(ip, port, "call")
+        self.receive_audio_socket = None
+        self.send_audio_socket = None
         self.my_name = "noa"
         self.call_name = "amir"
+        self.initiate_threads()
 
     def registry_values(self):
         """
@@ -48,58 +74,27 @@ class Client(object):
         CloseKey(raw_key)
         return ip, port
 
-    def connect_to_server(self, ip, port, kind):
-        """
-        connect client socket
-        """
-        sock = ''
-        try:
-            # initiate socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # connect to server
-            print("ip =", ip)
-            print("port =", port)
-            sock.connect((ip, port))
-        except Exception as e:
-            print("Error initate_client_socket", e)
-            exit()
-
-        if kind == "call":
-            self.initiate_send_thread(sock)
-
-        else:
-            self.initiate_receive_thread(sock)
-
-    def initiate_send_thread(self, sock):
+    def initiate_threads(self):
         """
         sends call to server
         starts thread that sends video
         """
-        self.send_video_socket = sock
-        mes = "call " + str(self.call_name)
-        self.send_chunk(mes.encode(), self.send_video_socket)
-        mes = self.receive_mes(self.send_video_socket)
-        print(mes)
-        send_thread = threading.Thread(target=self.send_video)
-        send_thread.start()
-
-    def initiate_receive_thread(self, sock):
-        """
-        sends listening to server
-        starts thread that receives video
-        """
-        self.receive_video_socket = sock
-        mes = "listening " + str(self.my_name)
-        self.send_chunk(mes.encode(), self.receive_video_socket)
-        mes = self.receive_mes(self.receive_video_socket)
-        print(mes)
-        receive_thread = threading.Thread(target=self.receive_video)
-        receive_thread.start()
+        send_video_thread = threading.Thread(target=self.send_video)
+        send_video_thread.start()
+        send_audio_thread = threading.Thread(target=self.send_audio)
+        send_audio_thread.start()
+        receive_video_thread = threading.Thread(target=self.receive_video)
+        receive_video_thread.start()
+        receive_audio_thread = threading.Thread(target=self.receive_audio)
+        receive_audio_thread.start()
 
     def send_video(self):
         """
         sends video to server
         """
+        self.send_video_socket = self.start_socket(IP, SEND_VIDEO_PORT)
+        self.send_chunk(self.call_name, self.receive_video_socket)
+        print(self.receive_mes(self.send_video_socket))
         # print("here send")
         cap = cv.VideoCapture(CAPTURE)
         cap.set(WID, WIDTH)
@@ -155,6 +150,9 @@ class Client(object):
         """
         receives and shows video from server
         """
+        self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
+        self.send_chunk(self.my_name, self.receive_video_socket)
+        print(self.receive_mes(self.receive_video_socket))
         try:
             code = b'start'
             num_of_chunks = WIDTH * HEIGHT * WID / BUF
@@ -182,7 +180,7 @@ class Client(object):
         except Exception as e:
             self.receive_video_socket.close()
             cv.destroyAllWindows()
-            print ("Error send_request_to_server:", e)
+            print ("Error receive_video:", e)
 
     @staticmethod
     def receive_mes(sock):
@@ -201,12 +199,78 @@ class Client(object):
             sock.close()
             print("Error receive_mes: ", e)
 
+    @staticmethod
+    def start_socket(ip, port):
+        """
+        starts and returns socket
+        """
+        try:
+            # initiate socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # connect to server
+            print("ip =", ip)
+            print("port =", port)
+            sock.connect((ip, port))
+            return sock
+        except Exception as e:
+            print("Error start_socket", e)
+            exit()
+
+    def receive_audio(self):
+        """
+        receives and plays audio
+        """
+        self.receive_audio_socket = self.start_socket(IP, RECEIVE_AUDIO_PORT)
+        self.send_chunk(self.my_name, self.receive_audio_socket)
+        print(self.receive_mes(self.receive_audio_socket))
+        p_receive = pyaudio.PyAudio()
+        stream_receive = p_receive.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True,
+                                        frames_per_buffer=CHUNK, input=False)
+        i = 0
+        try:
+            while True:
+                i += 1
+                data = self.receive_audio_socket.recv(CHUNK)  # gets audio chunk
+                print("got chunk number {} of length {}".format(i, len(data)))
+                stream_receive.write(data)  # plays
+                #print("wrote chunk #{}".format(i))
+        except KeyboardInterrupt:
+            pass
+        print('Shutting down')
+        self.receive_audio_socket.close()
+        stream_receive.close()
+        p_receive.terminate()
+
+    def send_audio(self):
+        """
+        records and sends audio to server
+        """
+        self.send_audio_socket = self.start_socket(IP, SEND_AUDIO_PORT)
+        self.send_chunk(self.call_name, self.receive_video_socket)
+        print(self.receive_mes(self.send_audio_socket))
+        p_send = pyaudio.PyAudio()  # Create an interface to PortAudio
+        print('Recording...')
+        stream_send = p_send.open(format=FORMAT, channels=CHANNELS, rate=RATE, frames_per_buffer=chunk, input=True,
+                                  output=False)
+        try:
+            # Store data in chunks for 3 seconds
+            done = False
+            while not done:
+                data = stream_send.read(chunk)   # records chunk
+                self.send_audio_socket.send(data)  # sends chunk
+            print('Finished recording')
+        except Exception as e:
+            print("sending audio error: {}".format(e))
+        self.send_audio_socket.close()
+        stream_send.close()
+        p_send.terminate()
+
 
 def main():
     """
     check my methods
     """
-    client = Client(IP, PORT)
+    client = Client(IP)
 
 
 if __name__ == '__main__':
