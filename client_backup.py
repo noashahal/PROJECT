@@ -93,7 +93,7 @@ class Client(object):
         sends video to server
         """
         self.send_video_socket = self.start_socket(IP, SEND_VIDEO_PORT)
-        self.send_chunk(self.call_name.encode(), self.receive_video_socket)
+        self.send_chunk(self.call_name.encode(), self.send_video_socket)
         print(self.receive_mes(self.send_video_socket))
         # print("here send")
         cap = cv.VideoCapture(CAPTURE)
@@ -246,7 +246,7 @@ class Client(object):
         records and sends audio to server
         """
         self.send_audio_socket = self.start_socket(IP, SEND_AUDIO_PORT)
-        self.send_chunk(self.call_name.encode(), self.receive_video_socket)
+        self.send_chunk(self.call_name.encode(), self.send_audio_socket)
         print(self.receive_mes(self.send_audio_socket))
         p_send = pyaudio.PyAudio()  # Create an interface to PortAudio
         print('Recording...')

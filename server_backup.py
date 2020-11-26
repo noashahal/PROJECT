@@ -102,6 +102,7 @@ class Server(object):
         calls receive_and_send_video with names socket
         """
         receive_video_client_socket, address = self.receive_video_socket.accept()
+        print("connected")
         name = self.receive_mes(receive_video_client_socket)
         while name not in self.client_video_dict:
             time.sleep(TIME_SLEEP)
@@ -117,7 +118,8 @@ class Server(object):
         calls receive_and_send_audio with names socket
         """
         receive_audio_client_socket, address = self.receive_audio_socket.accept()
-        name =  self.receive_mes(receive_audio_client_socket)
+        print("connected")
+        name = self.receive_mes(receive_audio_client_socket)
         while name not in self.client_audio_dict:
             time.sleep(TIME_SLEEP)
             print("waiting for the other client to connect")
@@ -132,6 +134,7 @@ class Server(object):
         adds name to dictionary
         """
         send_video_client_socket, address = self.send_video_socket.accept()
+        print("connected")
         my_name = self.receive_mes(send_video_client_socket)
         self.client_video_dict[my_name] = send_video_client_socket
         self.send_chunk("listening vid", send_video_client_socket)
@@ -143,6 +146,7 @@ class Server(object):
         adds name to dictionary
         """
         send_audio_client_socket, address = self.send_audio_socket.accept()
+        print("connected")
         my_name = self.receive_mes(send_audio_client_socket)
         self.client_audio_dict[my_name] = send_audio_client_socket
         self.send_chunk("listening audio", send_audio_client_socket)
