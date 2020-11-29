@@ -260,6 +260,7 @@ class Client(object):
             mes = self.receive_mes(self.send_audio_socket)
         p_send = pyaudio.PyAudio()  # Create an interface to PortAudio
         print('Recording...')
+
         stream_send = p_send.open(format=FORMAT, channels=CHANNELS, rate=RATE, frames_per_buffer=chunk, input=True,
                                   output=False)
         try:
