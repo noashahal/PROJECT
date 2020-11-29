@@ -79,14 +79,14 @@ class Client(object):
         sends call to server
         starts thread that sends video
         """
-        send_video_thread = threading.Thread(target=self.send_video)
-        send_video_thread.start()
+        receive_audio_thread = threading.Thread(target=self.receive_audio)
+        receive_audio_thread.start()
         send_audio_thread = threading.Thread(target=self.send_audio)
         send_audio_thread.start()
         receive_video_thread = threading.Thread(target=self.receive_video)
         receive_video_thread.start()
-        receive_audio_thread = threading.Thread(target=self.receive_audio)
-        receive_audio_thread.start()
+        send_video_thread = threading.Thread(target=self.send_video)
+        send_video_thread.start()
 
     def send_video(self):
         """
@@ -94,7 +94,12 @@ class Client(object):
         """
         self.send_video_socket = self.start_socket(IP, SEND_VIDEO_PORT)
         self.send_chunk(self.call_name.encode(), self.send_video_socket)
-        print(self.receive_mes(self.send_video_socket))
+        mes = self.receive_mes(self.send_video_socket)
+        print(mes)
+        while mes is "wait":
+            time.sleep(TIME_SLEEP)
+            print("waiting for the other client to connect")
+            mes = self.receive_mes(self.send_video_socket)
         # print("here send")
         cap = cv.VideoCapture(CAPTURE)
         cap.set(WID, WIDTH)
@@ -247,7 +252,12 @@ class Client(object):
         """
         self.send_audio_socket = self.start_socket(IP, SEND_AUDIO_PORT)
         self.send_chunk(self.call_name.encode(), self.send_audio_socket)
-        print(self.receive_mes(self.send_audio_socket))
+        mes = self.receive_mes(self.send_video_socket)
+        print(mes)
+        while mes is "wait":
+            time.sleep(TIME_SLEEP)
+            print("waiting for the other client to connect")
+            mes = self.receive_mes(self.send_video_socket)
         p_send = pyaudio.PyAudio()  # Create an interface to PortAudio
         print('Recording...')
         stream_send = p_send.open(format=FORMAT, channels=CHANNELS, rate=RATE, frames_per_buffer=chunk, input=True,
