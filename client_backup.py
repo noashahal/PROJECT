@@ -252,12 +252,12 @@ class Client(object):
         """
         self.send_audio_socket = self.start_socket(IP, SEND_AUDIO_PORT)
         self.send_chunk(self.call_name.encode(), self.send_audio_socket)
-        mes = self.receive_mes(self.send_video_socket)
+        mes = self.receive_mes(self.send_audio_socket)
         print(mes)
         while mes is "wait":
             time.sleep(TIME_SLEEP)
             print("waiting for the other client to connect")
-            mes = self.receive_mes(self.send_video_socket)
+            mes = self.receive_mes(self.send_audio_socket)
         p_send = pyaudio.PyAudio()  # Create an interface to PortAudio
         print('Recording...')
         stream_send = p_send.open(format=FORMAT, channels=CHANNELS, rate=RATE, frames_per_buffer=chunk, input=True,
