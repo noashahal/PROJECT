@@ -84,9 +84,9 @@ class Client(object):
         send_audio_thread = threading.Thread(target=self.send_audio)
         send_audio_thread.start()
         receive_video_thread = threading.Thread(target=self.receive_video)
-        receive_video_thread.start()
+        #receive_video_thread.start()
         send_video_thread = threading.Thread(target=self.send_video)
-        send_video_thread.start()
+        #send_video_thread.start()
 
     def send_video(self):
         """
@@ -96,10 +96,12 @@ class Client(object):
         self.send_chunk(self.call_name.encode(), self.send_video_socket)
         mes = self.receive_mes(self.send_video_socket)
         print(mes)
-        while mes is "wait":
+        mes = self.receive_mes(self.send_video_socket)
+        print(mes)
+        while mes == "wait":
             time.sleep(TIME_SLEEP)
-            print("waiting for the other client to connect")
             mes = self.receive_mes(self.send_video_socket)
+            print(mes)
         # print("here send")
         cap = cv.VideoCapture(CAPTURE)
         cap.set(WID, WIDTH)
@@ -225,12 +227,14 @@ class Client(object):
         """
         receives and plays audio
         """
+        print("got to receive audio")
         self.receive_audio_socket = self.start_socket(IP, RECEIVE_AUDIO_PORT)
         self.send_chunk(self.my_name.encode(), self.receive_audio_socket)
         print(self.receive_mes(self.receive_audio_socket))
         p_receive = pyaudio.PyAudio()
         stream_receive = p_receive.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True,
                                         frames_per_buffer=CHUNK, input=False)
+        print("receive stream made")
         i = 0
         try:
             while True:
@@ -250,25 +254,33 @@ class Client(object):
         """
         records and sends audio to server
         """
+        print("got to send audio")
         self.send_audio_socket = self.start_socket(IP, SEND_AUDIO_PORT)
         self.send_chunk(self.call_name.encode(), self.send_audio_socket)
         mes = self.receive_mes(self.send_audio_socket)
         print(mes)
-        while mes is "wait":
+        mes = self.receive_mes(self.send_audio_socket)
+        print(mes)
+        while mes == "wait":
             time.sleep(TIME_SLEEP)
-            print("waiting for the other client to connect")
             mes = self.receive_mes(self.send_audio_socket)
+            print(mes)
         p_send = pyaudio.PyAudio()  # Create an interface to PortAudio
         print('Recording...')
 
         stream_send = p_send.open(format=FORMAT, channels=CHANNELS, rate=RATE, frames_per_buffer=chunk, input=True,
                                   output=False)
+        print("send stream opened")
         try:
             # Store data in chunks for 3 seconds
             done = False
+            num = 1
             while not done:
                 data = stream_send.read(chunk)   # records chunk
+                print("chunk {} recorded".format(num))
                 self.send_audio_socket.send(data)  # sends chunk
+                print("chunk {} sent".format(num))
+                num += 1
             print('Finished recording')
         except Exception as e:
             print("sending audio error: {}".format(e))
