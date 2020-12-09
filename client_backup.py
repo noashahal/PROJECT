@@ -29,9 +29,10 @@ WAIT_KEY = 1
 END = 0
 MAX_CHUNK_SIZE = 10  # for zfill - len of messages
 FORMAT = pyaudio.paInt16  # audio format
-CHANNELS = 2  # num of channels for audio
+CHANNELS = 1  # num of channels for audio
 RATE = 44100  # audio send rate
 chunk = CHUNK = 1024  # audio chunk size
+EXIT = -1
 
 
 class Client(object):
@@ -47,8 +48,14 @@ class Client(object):
         self.send_video_socket = None
         self.receive_audio_socket = None
         self.send_audio_socket = None
-        self.my_name = "noa"
-        self.call_name = "amir"
+        self.my_name = "noa"  # "noa"
+        self.call_name = "amir"  # "amir"
+        self.lock = threading.Lock()
+
+        self.voice_device = pyaudio.PyAudio()
+
+        self.voice_stream = self.voice_device.open(format=FORMAT, channels=CHANNELS, rate=RATE,
+                                                   frames_per_buffer=chunk, input=True, output=True)
         self.initiate_threads()
 
     def registry_values(self):
@@ -84,9 +91,9 @@ class Client(object):
         send_audio_thread = threading.Thread(target=self.send_audio)
         send_audio_thread.start()
         receive_video_thread = threading.Thread(target=self.receive_video)
-        #receive_video_thread.start()
+        receive_video_thread.start()
         send_video_thread = threading.Thread(target=self.send_video)
-        #send_video_thread.start()
+        send_video_thread.start()
 
     def send_video(self):
         """
@@ -121,6 +128,7 @@ class Client(object):
                 else:
                     break
         except ConnectionAbortedError as e:
+            print("exception send video")
             self.send_video_socket.close()
 
     @staticmethod
@@ -143,15 +151,20 @@ class Client(object):
                 raw_chunk_size_to_get - len(raw_chunk_size))
         try:
             chunk_size = int(raw_chunk_size.decode())
-        except:
+        except Exception as e:
             print('raw chunk size is {} its length is {}'
                   .format(raw_chunk_size, len(raw_chunk_size)))
+            print("exception receive chunk 1: {}".format(e))
         left = chunk_size
         chunk = b''
-        while left > END:
-            chunk += self.receive_video_socket.recv(left)
-            left = left - len(chunk)
-        return chunk
+        try:
+            while left > END:
+                chunk += self.receive_video_socket.recv(left)
+                left = left - len(chunk)
+            return chunk
+        except Exception as e:
+            print("exception receive chunk 1: {}".format(e))
+            self.receive_video_socket.close()
 
     def receive_video(self):
         """
@@ -187,7 +200,8 @@ class Client(object):
         except Exception as e:
             self.receive_video_socket.close()
             cv.destroyAllWindows()
-            print ("Error receive_video:", e)
+            print("Error receive_video:", e)
+            sys.exit(EXIT)
 
     @staticmethod
     def receive_mes(sock):
@@ -221,7 +235,7 @@ class Client(object):
             return sock
         except Exception as e:
             print("Error start_socket", e)
-            exit()
+            #exit()
 
     def receive_audio(self):
         """
@@ -231,24 +245,28 @@ class Client(object):
         self.receive_audio_socket = self.start_socket(IP, RECEIVE_AUDIO_PORT)
         self.send_chunk(self.my_name.encode(), self.receive_audio_socket)
         print(self.receive_mes(self.receive_audio_socket))
-        p_receive = pyaudio.PyAudio()
-        stream_receive = p_receive.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True,
-                                        frames_per_buffer=CHUNK, input=False)
+
         print("receive stream made")
         i = 0
+        done = False
         try:
-            while True:
+            while not done:
                 i += 1
                 data = self.receive_audio_socket.recv(CHUNK)  # gets audio chunk
-                print("got chunk number {} of length {}".format(i, len(data)))
-                stream_receive.write(data)  # plays
+                print("got audio chunk number {} of length {}".format(i, len(data)))
+                self.lock.acquire()
+                self.voice_stream.write(data)  # plays
+                self.lock.release()
+                # if len(data) == 0:
+                  #   done = True
                 #print("wrote chunk #{}".format(i))
         except KeyboardInterrupt:
+            print("exception receive audio")
             pass
         print('Shutting down')
-        self.receive_audio_socket.close()
-        stream_receive.close()
-        p_receive.terminate()
+        self.close_all()
+        # stream_receive.close()
+        # p_receive.terminate()
 
     def send_audio(self):
         """
@@ -265,18 +283,20 @@ class Client(object):
             time.sleep(TIME_SLEEP)
             mes = self.receive_mes(self.send_audio_socket)
             print(mes)
-        p_send = pyaudio.PyAudio()  # Create an interface to PortAudio
+        # p_send = pyaudio.PyAudio()  # Create an interface to PortAudio
         print('Recording...')
 
-        stream_send = p_send.open(format=FORMAT, channels=CHANNELS, rate=RATE, frames_per_buffer=chunk, input=True,
-                                  output=False)
+        # stream_send = p_send.open(format=FORMAT, channels=CHANNELS, rate=RATE, frames_per_buffer=chunk, input=True,
+        #                          output=False)
         print("send stream opened")
         try:
             # Store data in chunks for 3 seconds
             done = False
             num = 1
             while not done:
-                data = stream_send.read(chunk)   # records chunk
+                self.lock.acquire()
+                data = self.voice_stream.read(chunk)   # records chunk
+                self.lock.release()
                 print("chunk {} recorded".format(num))
                 self.send_audio_socket.send(data)  # sends chunk
                 print("chunk {} sent".format(num))
@@ -284,9 +304,18 @@ class Client(object):
             print('Finished recording')
         except Exception as e:
             print("sending audio error: {}".format(e))
-        self.send_audio_socket.close()
+        self.close_all()
         stream_send.close()
         p_send.terminate()
+
+    def close_all(self):
+        """
+        closes all sockets and connections
+        """
+        self.receive_video_socket.close()
+        self.send_video_socket.close()
+        self.receive_audio_socket.close()
+        self.send_audio_socket.close()
 
 
 def main():
@@ -294,7 +323,8 @@ def main():
     check my methods
     """
     client = Client()
-
+    while True:
+        time.sleep(TIME_SLEEP)
 
 if __name__ == '__main__':
     main()

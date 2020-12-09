@@ -45,6 +45,7 @@ class Server(object):
             print('started socket at ip {} port {}'.format(IP, SEND_AUDIO_PORT))
             self.client_video_dict = {}
             self.client_audio_dict = {}
+
         except socket.error as e:
             print("socket creation fail: ", e)
             sys.exit(EXIT)
@@ -90,11 +91,11 @@ class Server(object):
                 receive_audio_thread = threading.Thread(target=self.add_audio_client)
                 send_video_thread = threading.Thread(target=self.start_video_relay)
                 send_audio_thread = threading.Thread(target=self.start_audio_relay)
-                #receive_video_thread.start()
+                receive_video_thread.start()
                 print("started receive video thread")
                 receive_audio_thread.start()
                 print("started receive audio thread")
-                #send_video_thread.start()
+                send_video_thread.start()
                 print("started send video thread")
                 send_audio_thread.start()
                 print("started send audio thread")
@@ -113,18 +114,25 @@ class Server(object):
         gets name
         calls receive_and_send_video with names socket
         """
-        receive_video_client_socket, address = self.receive_video_socket.accept()
-        print("connected relay video: {}".format(receive_video_client_socket))
-        name = self.receive_mes(receive_video_client_socket)
-        print("calling: {}".format(name))
-        self.send_chunk("calling".encode(), receive_video_client_socket)
-        while name not in self.client_video_dict:
-            time.sleep(TIME_SLEEP)
-            print("waiting for the other client to connect")
-            self.send_chunk("wait".encode(), receive_video_client_socket)
-        self.send_chunk("start".encode(), receive_video_client_socket)
-        send_sock = self.client_video_dict[name]
-        self.receive_and_send_video(receive_video_client_socket, send_sock)
+        try:
+            receive_video_client_socket, address = self.receive_video_socket.accept()
+            print("connected relay video: {}".format(receive_video_client_socket))
+            name = self.receive_mes(receive_video_client_socket)
+            print("calling: {}".format(name))
+            self.send_chunk("calling".encode(), receive_video_client_socket)
+            while name not in self.client_video_dict:
+                time.sleep(TIME_SLEEP)
+                print("waiting for the other client to connect")
+                self.send_chunk("wait".encode(), receive_video_client_socket)
+            self.send_chunk("start".encode(), receive_video_client_socket)
+            send_sock = self.client_video_dict[name]
+            self.receive_and_send_video(receive_video_client_socket, send_sock)
+        except socket.error as e:
+            print("socket video relay fail: ", e)
+            sys.exit(EXIT)
+        except Exception as e:
+            print("video relay exception: ", e)
+            sys.exit(EXIT)
 
     def start_audio_relay(self):
         """
@@ -132,17 +140,24 @@ class Server(object):
         gets name
         calls receive_and_send_audio with names socket
         """
-        receive_audio_client_socket, address = self.receive_audio_socket.accept()
-        print("connected relay audio")
-        name = self.receive_mes(receive_audio_client_socket)
-        self.send_chunk("calling".encode(), receive_audio_client_socket)
-        while name not in self.client_audio_dict:
-            time.sleep(TIME_SLEEP)
-            print("waiting for the other client to connect")
-            self.send_chunk("wait".encode(), receive_audio_client_socket)
-        self.send_chunk("start".encode(), receive_audio_client_socket)
-        send_sock = self.client_audio_dict[name]
-        self.receive_and_send_audio(receive_audio_client_socket, send_sock)
+        try:
+            receive_audio_client_socket, address = self.receive_audio_socket.accept()
+            print("connected relay audio")
+            name = self.receive_mes(receive_audio_client_socket)
+            self.send_chunk("calling".encode(), receive_audio_client_socket)
+            while name not in self.client_audio_dict:
+                time.sleep(TIME_SLEEP)
+                print("waiting for the other client to connect")
+                self.send_chunk("wait".encode(), receive_audio_client_socket)
+            self.send_chunk("start".encode(), receive_audio_client_socket)
+            send_sock = self.client_audio_dict[name]
+            self.receive_and_send_audio(receive_audio_client_socket, send_sock)
+        except socket.error as e:
+            print("socket audio relay fail: ", e)
+            sys.exit(EXIT)
+        except Exception as e:
+            print("audio relay exception: ", e)
+            sys.exit(EXIT)
 
     def add_video_client(self):
         """
@@ -150,13 +165,20 @@ class Server(object):
         gets name
         adds name to dictionary
         """
-        #print("starting receive video")
-        send_video_client_socket, address = self.send_video_socket.accept()
-        print("connected receive video: {}".format(send_video_client_socket))
-        my_name = self.receive_mes(send_video_client_socket)
-        self.client_video_dict[my_name] = send_video_client_socket
-        self.send_chunk("listening vid".encode(), send_video_client_socket)
-        print(self.client_video_dict)
+        try:
+            #print("starting receive video")
+            send_video_client_socket, address = self.send_video_socket.accept()
+            print("connected receive video: {}".format(send_video_client_socket))
+            my_name = self.receive_mes(send_video_client_socket)
+            self.client_video_dict[my_name] = send_video_client_socket
+            self.send_chunk("listening vid".encode(), send_video_client_socket)
+            print(self.client_video_dict)
+        except socket.error as e:
+            print("socket add video client fail: ", e)
+            sys.exit(EXIT)
+        except Exception as e:
+            print("add video client exception: ", e)
+            sys.exit(EXIT)
 
     def add_audio_client(self):
         """
@@ -164,11 +186,18 @@ class Server(object):
         gets name
         adds name to dictionary
         """
-        send_audio_client_socket, address = self.send_audio_socket.accept()
-        print("connected receive audio")
-        my_name = self.receive_mes(send_audio_client_socket)
-        self.client_audio_dict[my_name] = send_audio_client_socket
-        self.send_chunk("listening audio".encode(), send_audio_client_socket)
+        try:
+            send_audio_client_socket, address = self.send_audio_socket.accept()
+            print("connected receive audio")
+            my_name = self.receive_mes(send_audio_client_socket)
+            self.client_audio_dict[my_name] = send_audio_client_socket
+            self.send_chunk("listening audio".encode(), send_audio_client_socket)
+        except socket.error as e:
+            print("socket add audio client fail: ", e)
+            sys.exit(EXIT)
+        except Exception as e:
+            print("add audio client exception: ", e)
+            sys.exit(EXIT)
 
     def receive_and_send_video(self, receive_video_socket, send_video_socket):
         """
@@ -199,9 +228,9 @@ class Server(object):
             while True:
                 i += 1
                 data = receive_audio_socket.recv(CHUNK)
-                print("got chunk number {} of length {}".format(i, len(data)))
-                #if len(data) == 0:
-                    #break
+                print("got audio chunk number {} of length {}".format(i, len(data)))
+                if len(data) == 0:
+                    break
                 send_audio_socket.send(data)
         except KeyboardInterrupt:
             pass
@@ -254,6 +283,15 @@ class Server(object):
         except Exception as e:
             client_socket.close()
             print("Error in receive_mes: ", e)
+
+    def close_all(self):
+        """
+        closes all sockets and connections
+        """
+        self.receive_video_socket.close()
+        self.send_video_socket.close()
+        self.receive_audio_socket.close()
+        self.send_audio_socket.close()
 
 
 def main():
