@@ -5,7 +5,6 @@ import numpy as np
 import cv2 as cv
 import time
 import pyaudio
-FOUR_BYTES = 4
 EXIT = -1
 LISTEN = 10
 IP = '0.0.0.0'
@@ -27,7 +26,6 @@ WAIT_KEY = 1
 END = 0
 MAX_CHUNK_SIZE = 10  # for zfill - len of messages
 CHUNK = 1024
-MAX_CONNECT = 2
 
 
 class Server(object):
@@ -81,25 +79,17 @@ class Server(object):
         accepts a connection request and call handle _client
         for receiving its requests
         """
-        num = 0
         done = False
-        while not done and num < MAX_CONNECT:
+        while not done:
             try:
                 # starts threads
-
-                receive_video_thread = threading.Thread(target=self.add_video_client)
-                receive_audio_thread = threading.Thread(target=self.add_audio_client)
-                send_video_thread = threading.Thread(target=self.start_video_relay)
-                send_audio_thread = threading.Thread(target=self.start_audio_relay)
-                receive_video_thread.start()
-                print("started receive video thread")
-                receive_audio_thread.start()
-                print("started receive audio thread")
-                send_video_thread.start()
-                print("started send video thread")
-                send_audio_thread.start()
-                print("started send audio thread")
-                num += 1
+                receive_video_client_socket, address = self.receive_video_socket.accept()
+                print("connected relay video: {}".format(receive_video_client_socket))
+                video_thread = threading.Thread(target=self.start_video_relay,
+                                                args=(receive_video_client_socket, ))
+                audio_thread = threading.Thread(target=self.start_audio_relay)
+                video_thread.start()
+                audio_thread.start()
 
             except socket.error as msg:
                 print("socket failure: ", msg)
@@ -108,15 +98,14 @@ class Server(object):
                 print("exception: ", msg)
                 done = True
 
-    def start_video_relay(self):
+    def start_video_relay(self, receive_video_client_socket):
         """
         connects receive video socket,
         gets name
         calls receive_and_send_video with names socket
         """
         try:
-            receive_video_client_socket, address = self.receive_video_socket.accept()
-            print("connected relay video: {}".format(receive_video_client_socket))
+            self.add_video_client()
             name = self.receive_mes(receive_video_client_socket)
             print("calling: {}".format(name))
             self.send_chunk("calling".encode(), receive_video_client_socket)
@@ -141,6 +130,7 @@ class Server(object):
         calls receive_and_send_audio with names socket
         """
         try:
+            self.add_audio_client()
             receive_audio_client_socket, address = self.receive_audio_socket.accept()
             print("connected relay audio")
             name = self.receive_mes(receive_audio_client_socket)
@@ -296,7 +286,7 @@ class Server(object):
 
 def main():
     """
-    server main - receives a message returns it to client
+    todo: write more
     """
     try:
         srvr = Server()

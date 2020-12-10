@@ -84,37 +84,43 @@ class Client(object):
         # connects listening socket:
         self.listen_socket = self.start_socket(IP, LISTEN_PORT)
         # sends name for dictionary
-        self.send_mes(self.my_name, self.listen_socket)
+        self.send_mes(self.my_name.encode(), self.listen_socket)
         # gets call or nah:
         mes = self.receive_mes(self.listen_socket)
         print(mes)
         answer = input()
-        self.send_mes(answer, self.listen_socket)
+        self.send_mes(answer.encode(), self.listen_socket)
         if answer == "Y":
             self.start_call_rec()
-        print("bye guys, not listening no more")
-        self.listen_socket.close()  # won't happen forreal
+        else:
+            print("bye guys, not listening no more")
+            self.listen_socket.close()  # won't happen forreal
 
     def caller(self):
         """
         checks if wants to call if so, gets options and calls
         """
         # connects calling socket:
-        self.call_socket = self.start_socket(IP, CALL_PORT)
-        # sends name
-        self.send_mes(self.my_name, self.call_socket)
-        # gets calling options
-        options = self.receive_mes(self.call_socket)
-        print("options: {}".format(options))
-        print("Enter person you want to call")
-        calling = input()
-        self.send_mes(calling, self.call_socket)
-        answer = self.receive_mes(self.call_socket)
-        if answer.startswith("no"):
-            print("didn't answer")
-            self.call_socket.close()
+        print("do you want to call? yes/no")
+        ans = input()
+        if ans == "yes":
+            self.call_socket = self.start_socket(IP, CALL_PORT)
+            # sends name
+            self.send_mes(self.my_name.encode(), self.call_socket)
+            # gets calling options
+            options = self.receive_mes(self.call_socket)
+            print("options: {}".format(options))
+            print("Enter person you want to call")
+            calling = input()
+            self.send_mes(calling.encode(), self.call_socket)
+            answer = self.receive_mes(self.call_socket)
+            if answer.startswith("no"):
+                print("didn't answer")
+                self.call_socket.close()
+            else:
+                self.start_call_send()
         else:
-            self.start_call_send()
+            print("ok not calling")
 
     @staticmethod
     def start_call_rec():
@@ -123,6 +129,7 @@ class Client(object):
     @staticmethod
     def start_call_send():
         print("yay!, calling")
+
 
 def main():
     """

@@ -107,9 +107,9 @@ class Server(object):
             answer = input()
             if answer == "Y":
                 ready = True
-        options = ' '.join(self.client_dict.keys())
+        options = ', '.join(self.client_dict.keys())
         # sends options to calling client:
-        self.send_mes(options, call_socket)
+        self.send_mes(options.encode(), call_socket)
         # gets from calling client user they want to call:
         receiver_name = self.receive_mes(call_socket)
         # gets receivers socket from dictionary
@@ -118,13 +118,13 @@ class Server(object):
             sys.exit(EXIT)
         receiver_sock = self.client_dict[receiver_name]
         mes = "you are getting a call from {}. do you accept (send Y/N)".format(caller_name)
-        self.send_mes(mes, receiver_sock)
+        self.send_mes(mes.encode(), receiver_sock)
         answer = self.receive_mes(receiver_sock)
         if answer == "Y":
-            self.send_mes("call", call_socket)
+            self.send_mes("call".encode(), call_socket)
             self.start_call()
         else:
-            self.send_mes("no call", call_socket)
+            self.send_mes("no call".encode(), call_socket)
 
     @staticmethod
     def start_call():
