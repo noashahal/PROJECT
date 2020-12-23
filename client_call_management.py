@@ -1,5 +1,6 @@
 import threading
 import sys
+import client_backup
 import socket
 import time
 TIME_SLEEP = 0.1
@@ -10,6 +11,7 @@ IP = '127.0.0.1'
 LISTEN_PORT = 1000
 CALL_PORT = 1001
 WAIT_KEY = 1
+PERSON_CALLING = 0
 
 
 class Client(object):
@@ -91,7 +93,8 @@ class Client(object):
         answer = input()
         self.send_mes(answer.encode(), self.listen_socket)
         if answer == "Y":
-            self.start_call_rec()
+            calling = str(mes).split()[PERSON_CALLING]
+            self.start_call(calling)
         else:
             print("bye guys, not listening no more")
             self.listen_socket.close()  # won't happen forreal
@@ -118,17 +121,14 @@ class Client(object):
                 print("didn't answer")
                 self.call_socket.close()
             else:
-                self.start_call_send()
+                self.start_call(calling)
         else:
             print("ok not calling")
 
-    @staticmethod
-    def start_call_rec():
-        print("yay!, receiving call")
+    def start_call(self, calling):
+        print("yay!, starting call")
+        client_backup.main(calling, self.my_name)
 
-    @staticmethod
-    def start_call_send():
-        print("yay!, calling")
 
 
 def main():

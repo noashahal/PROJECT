@@ -1,7 +1,7 @@
 import threading
 import sys
 import socket
-import time
+import server_backup
 TIME_SLEEP = 0.1
 MAX_CHUNK_SIZE = 10  # for zfill - len of messages
 EXIT = -1
@@ -99,14 +99,6 @@ class Server(object):
         # gets name of user making the call:
         caller_name = self.receive_mes(call_socket)
         # gets all keys of the dictionary, all potential receivers:
-        ready = False
-        while not ready:
-            time.sleep(TIME_SLEEP)
-            print(self.client_dict)
-            print("can send options? enter Y/N")
-            answer = input()
-            if answer == "Y":
-                ready = True
         options = ', '.join(self.client_dict.keys())
         # sends options to calling client:
         self.send_mes(options.encode(), call_socket)
@@ -117,7 +109,7 @@ class Server(object):
             print("boi bye")
             sys.exit(EXIT)
         receiver_sock = self.client_dict[receiver_name]
-        mes = "you are getting a call from {}. do you accept (send Y/N)".format(caller_name)
+        mes = "{} is calling you. do you accept (send Y/N)".format(caller_name)
         self.send_mes(mes.encode(), receiver_sock)
         answer = self.receive_mes(receiver_sock)
         if answer == "Y":
@@ -128,7 +120,7 @@ class Server(object):
 
     @staticmethod
     def start_call():
-        print("yay!")
+        server_backup.main()
 
 
 def main():

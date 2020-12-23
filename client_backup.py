@@ -39,7 +39,7 @@ class Client(object):
     """
     class client Todo: write more
     """
-    def __init__(self):
+    def __init__(self, call_name, my_name):
         """
         todo: comment
         """
@@ -48,8 +48,8 @@ class Client(object):
         self.send_video_socket = None
         self.receive_audio_socket = None
         self.send_audio_socket = None
-        self.my_name = "noa"  # "noa"
-        self.call_name = "amir"  # "amir"
+        self.my_name = my_name  # "noa"
+        self.call_name = call_name  # "amir"
         self.lock = threading.Lock()
 
         self.voice_device = pyaudio.PyAudio()
@@ -305,8 +305,8 @@ class Client(object):
         except Exception as e:
             print("sending audio error: {}".format(e))
         self.close_all()
-        stream_send.close()
-        p_send.terminate()
+        self.voice_stream.close()
+        self.voice_device.terminate()
 
     def close_all(self):
         """
@@ -318,13 +318,14 @@ class Client(object):
         self.send_audio_socket.close()
 
 
-def main():
+def main(call_name, my_name):
     """
     check my methods
     """
-    client = Client()
+    client = Client(call_name, my_name)
     while True:
         time.sleep(TIME_SLEEP)
 
+
 if __name__ == '__main__':
-    main()
+    main("amir", "noa")
