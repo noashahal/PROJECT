@@ -130,7 +130,6 @@ class Client(object):
         client_backup.main(calling, self.my_name)
 
 
-
 def main():
     """
     check my methods

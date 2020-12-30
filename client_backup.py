@@ -166,6 +166,7 @@ class Client(object):
             print("exception receive chunk 1: {}".format(e))
             self.receive_video_socket.close()
 
+
     def receive_video(self):
         """
         receives and shows video from server
