@@ -18,14 +18,14 @@ class Client(object):
     """
     class client Todo: write more
     """
-    def __init__(self):
+    def __init__(self, name, calling):
         """
         initiates
         """
         self.listen_socket = None
         self.call_socket = None
-        self.my_name = "Noa"
-        self.initiate()
+        self.my_name = name
+        self.initiate(caller)
 
     @staticmethod
     def start_socket(ip, port):
@@ -68,15 +68,16 @@ class Client(object):
         data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
         sock.send(data)
 
-    def initiate(self):
+    def initiate(self, caller):
         """
         initiates 2 threads:
         listening and calling
         """
         listen_thread = threading.Thread(target=self.listener)
         listen_thread.start()
-        call_thread = threading.Thread(target=self.caller)
-        call_thread.start()
+        if caller:
+            call_thread = threading.Thread(target=self.caller)
+            call_thread.start()
 
     def listener(self):
         """
@@ -104,41 +105,42 @@ class Client(object):
         checks if wants to call if so, gets options and calls
         """
         # connects calling socket:
-        print("do you want to call? yes/no")
-        ans = input()
-        if ans == "yes":
-            self.call_socket = self.start_socket(IP, CALL_PORT)
-            # sends name
-            self.send_mes(self.my_name.encode(), self.call_socket)
-            # gets calling options
-            options = self.receive_mes(self.call_socket)
-            print("options: {}".format(options))
-            print("Enter person you want to call")
-            calling = input()
-            self.send_mes(calling.encode(), self.call_socket)
-            answer = self.receive_mes(self.call_socket)
-            if answer.startswith("no"):
-                print("didn't answer")
-                self.call_socket.close()
-            else:
-                self.start_call(calling)
+        self.call_socket = self.start_socket(IP, CALL_PORT)
+        # sends name
+        self.send_mes(self.my_name.encode(), self.call_socket)
+        # gets calling options
+        options = self.receive_mes(self.call_socket)
+        print("options: {}".format(options))
+        print("Enter person you want to call")
+        calling = input()
+        self.send_mes(calling.encode(), self.call_socket)
+        answer = self.receive_mes(self.call_socket)
+        if answer.startswith("no"):
+            print("didn't answer")
+            self.call_socket.close()
         else:
-            print("ok not calling")
+            self.start_call(calling)
 
     def start_call(self, calling):
         print("yay!, starting call")
         client_backup.main(calling, self.my_name)
 
+    def print(self, x):
+        """
+        prints
+        """
+        print(x)
 
-def main():
+
+def main(name, caller):
     """
     check my methods
     """
-    client = Client()
+    client = Client(name, caller)
     while True:
         time.sleep(TIME_SLEEP)
 
 
 if __name__ == '__main__':
-    main()
+    main("Noa", False)
 
