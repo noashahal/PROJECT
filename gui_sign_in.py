@@ -6,12 +6,13 @@ LENGTH = 250
 START = 0
 BORDER = 5
 
+
 class GUI(wx.Frame):
     """
     initiates ui
     """
     def __init__(self):
-        super(GUI, self).__init__(None, title="I Dont Know What Im Doing",
+        super(GUI, self).__init__(None, title="I Will Know What Im Doing",
                                   size=(WIDTH, LENGTH))
         # The combo box (dropdown menu)
         self.combo_box = None
@@ -19,45 +20,31 @@ class GUI(wx.Frame):
         self.client = None
         # panel:
         self.pnl = wx.Panel(self)  # creates panel
-        sb = wx.StaticBox(self.pnl)  # sequence of items
-        sbs = wx.StaticBoxSizer(sb, orient=wx.VERTICAL)  # boarder
-        self.pnl.SetSizer(sbs)
+        self.sb = wx.StaticBox(self.pnl)  # sequence of items
+        self.sbs = wx.BoxSizer(wx.VERTICAL)  # boarder
+
+        # menu:
+        self.make_menu()
+
         # username:
         self.username_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        self.text_user = wx.StaticText(self.pnl, label='Username', pos=(10, 20))  # username text
-        self.param_user = wx.TextCtrl(self.pnl, pos=(80, 20))  # username panel
-        GUI.init_ui(self)
+        self.text_user = wx.StaticText(self.pnl, label='Username')  # username text
+        self.param_user = wx.TextCtrl(self.pnl)  # username panel
+        self.username_sizer.Add(window=self.text_user, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.username_sizer.Add(window=self.param_user, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
 
-    def init_ui(self):
-        """
-        initiates UI of
-        graphic UI
-        """
-        #self.title = ""
-        #self.size = (START, START)
+        # sign in button:
+        self.btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.sign_in_btn = wx.Button(self.pnl, label='Sign In')
+        self.sign_in_btn.Bind(wx.EVT_BUTTON, self.on_signed_in)
+        self.btn_sizer.Add(window=self.sign_in_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
 
-        self.make_menu()
-        # sbs.Add(text_user)
-        #sbs.Add(self.name, flag=wx.CENTRE, border=BORDER)
-
-        self.position_all()
-
-        cbtn = wx.Button(self.pnl, label='Call', pos=(500, 300))
-        # Binds a certain method to the button, will be called when pressed
-        cbtn.Bind(wx.EVT_BUTTON, self.on_call)
-        wbtn = wx.Button(self.pnl, label='WAIT', pos=(700, 300))
-        # Binds a certain method to the button, will be called when pressed
-        wbtn.Bind(wx.EVT_BUTTON, self.wait_for_call)
-        #self.client = Client("Noa")
+        # size:
+        self.sbs.Add(self.username_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(self.btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.pnl.SetSizer(self.sbs)
         self.Centre()
         self.Show(True)
-
-    def position_all(self):
-        """
-        position all buttons
-        """
-        self.username_sizer.Add(window=self.text_user, proportion=0, flag=wx.ALL | wx.CENTER, border=10)
-        self.username_sizer.Add(window=self.param_user, proportion=0, flag=wx.ALL | wx.CENTER, border=10)
 
     def on_quit(self, e):
         """
@@ -66,25 +53,23 @@ class GUI(wx.Frame):
         """
         self.Close()
 
-    def on_call(self, e):
+    def on_signed_in(self, e):
         """
         when the user presses the send button,
         this function is called, which in tur          n
         generates the query by combining all parameters
         given by the user, and displays the text inside a message box.
         """
+        """
         # gets username
         name = self.param_user.GetValue()
         client = Client(name, True)
         self.Close(True)
-
-    def wait_for_call(self, e):
         """
-        when doesn't want to call
-        """
-        name = self.param_user.GetValue()
-        client = Client(name, False)
+        w = Example2(None)
+        w.Show()
         self.Close(True)
+
 
     def make_menu(self):
         """
