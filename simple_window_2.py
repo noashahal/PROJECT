@@ -1,23 +1,24 @@
-
+from gui_sign_in import *
 import wx
+WIDTH = 300
+LENGTH = 250
+START = 0
+BORDER = 5
 
 
-class Example2(wx.Frame):
+class GuiCall(GuiSignIn):
 
-    def __init__(self, *args, **kw):
-        super(Example2, self).__init__(*args, **kw)
-
+    def __init__(self):
+        super(GuiSignIn, self).__init__()
         self.init_ui()
 
     def init_ui(self):
-
         pnl = wx.Panel(self)
-        callButton = wx.Button(pnl, label='Call', pos=(20, 20))
+        call_btn = wx.Button(pnl, label=self.name, pos=(20, 20))
+        call_btn.Bind(wx.EVT_BUTTON, self.OnClose)
 
-        callButton.Bind(wx.EVT_BUTTON, self.OnClose)
-
-        self.SetSize((350, 250))
-        self.SetTitle('wx.Button 2')
+        #self.SetSize((WIDTH, LENGTH))
+        self.SetTitle('Call Window')
         self.Centre()
 
     def OnClose(self, e):
@@ -26,12 +27,11 @@ class Example2(wx.Frame):
 
 
 def main():
-
     app = wx.App()
-    ex = Example2(None)
+    ex = GuiCall()
     ex.Show()
     app.MainLoop()
 
 
 if __name__ == '__main__':
-    main()  
+    main()

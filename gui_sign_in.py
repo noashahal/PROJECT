@@ -87,8 +87,9 @@ class GuiSignIn(GuiAll):
         generates the query by combining all parameters
         given by the user, and displays the text inside a message box.
         """
+
         self.name = self.param_user.GetValue()
-        GuiCall()
+        GuiCall(self.name)
         self.Close(True)
 
 
