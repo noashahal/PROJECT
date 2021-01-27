@@ -79,6 +79,7 @@ class Server(object):
                 self.client_dict[name] = listening_socket
                 client_thread = threading.Thread(target=self.make_call)
                 client_thread.start()
+
             except socket.error as msg:
                 print("socket failure: ", msg)
                 done = True
@@ -99,7 +100,8 @@ class Server(object):
         # gets name of user making the call:
         caller_name = self.receive_mes(call_socket)
         # gets all keys of the dictionary, all potential receivers:
-        options = ', '.join(self.client_dict.keys())
+        options = ','.join(self.client_dict.keys())
+        print(options)
         # sends options to calling client:
         self.send_mes(options.encode(), call_socket)
         # gets from calling client user they want to call:
@@ -109,6 +111,7 @@ class Server(object):
             print("boi bye")
             sys.exit(EXIT)
         receiver_sock = self.client_dict[receiver_name]
+        """
         mes = "{} is calling you. do you accept (send Y/N)".format(caller_name)
         self.send_mes(mes.encode(), receiver_sock)
         answer = self.receive_mes(receiver_sock)
@@ -117,6 +120,8 @@ class Server(object):
             self.start_call()
         else:
             self.send_mes("no call".encode(), call_socket)
+        """
+
 
     @staticmethod
     def start_call():
