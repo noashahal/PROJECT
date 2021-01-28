@@ -53,6 +53,14 @@ class GuiAll(wx.Frame):
         """
         self.client = Client(username)
 
+    def start(self):
+        """
+        sets sizer and shows
+        """
+        self.SetSizer(self.sbs)
+        self.Centre()
+        self.Show(True)
+
 
 class GuiSignIn(GuiAll):
     """
@@ -80,9 +88,7 @@ class GuiSignIn(GuiAll):
         self.sbs.Add(username_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         self.sbs.Add(btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
 
-        self.SetSizer(self.sbs)
-        self.Centre()
-        self.Show(True)
+        self.start()
 
     def on_signed_in(self, e):
         """
@@ -100,6 +106,7 @@ class GuiCallOrWait(GuiAll):
 
     def __init__(self, username):
         super().__init__(None, "Call Window")
+        self.username = username
         self.start_client(username)
         self.init_ui()
         self.options = []
@@ -122,14 +129,13 @@ class GuiCallOrWait(GuiAll):
         call_btn_sizer.Add(window=wait_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         self.sbs.Add(call_btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
 
-        self.SetSizer(self.sbs)
-        self.Centre()
-        self.Show(True)
+        self.start()
 
     def on_call(self, e):
-        self.client.initiate_calling()
+        #self.client.initiate_calling()
         self.options = self.client.connected
-        GuiCallOptions(self.options)
+        print(self.options)
+        GuiCallOptions(self.options, self.username)
         self.Close(True)
 
     def on_wait(self, e):
@@ -138,26 +144,51 @@ class GuiCallOrWait(GuiAll):
 
 class GuiCallOptions(GuiAll):
 
-    def __init__(self, options):
+    def __init__(self, options, username):
         super().__init__(None, "Options Window")
-        self.text = wx.TextCtrl(self.pnl, style=wx.TE_MULTILINE)
-        self.init_ui(options)
+        #self.text = wx.TextCtrl(self.pnl, style=wx.TE_MULTILINE)
+        self.username = username
+        self.start_client(username)
+        self.options_lstbox = wx.ListBox(self.pnl, choices=options, style=wx.LB_SINGLE, name="contacts")
+        self.init_ui()
 
-    def init_ui(self, options):
+    def init_ui(self):
         # call options
         options_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        options_lstbox = wx.ListBox(self.pnl, size=(100, -1), choices=options, style=wx.LB_SINGLE)
-        self.Bind(wx.EVT_LISTBOX, self.on_list_box, options_lstbox)
-        options_sizer.Add(window=options_lstbox, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        options_sizer.Add(window=self.text, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        call_btn = wx.Button(self.pnl, label='Call')
+        call_btn.Bind(wx.EVT_BUTTON, self.on_call)
+        options_sizer.Add(window=self.options_lstbox, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        options_sizer.Add(window=call_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         self.sbs.Add(options_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        self.SetSizer(self.sbs)
-        self.Centre()
-        self.Show(True)
+        self.start()
 
-    def on_list_box(self, e):
-        self.text.AppendText("Current selection:"+e.GetEventObject().GetStringSelection()+"\n")
+    def on_call(self, e):
+        """
+        when one option clicked
+        """
+        self.client.initiate_calling()
+        calling = self.options_lstbox.GetString(self.options_lstbox.GetSelection())
+        print(calling)
+        self.client.ask_to_call(calling)
+        self.Close(True)
+        GuiWait()
 
+
+class GuiWait(GuiAll):
+    """
+    window in which waits for answer
+    """
+    def __init__(self):
+        super().__init__(None, "Wait Window")
+        self.init_ui()
+
+    def init_ui(self):
+        text_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        wait_text = wx.StaticText(self.pnl, label='Waiting For Answer....')
+        text_sizer.Add(window=wait_text, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(text_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+
+        self.start()
 
 def main():
     """

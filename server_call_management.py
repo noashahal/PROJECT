@@ -76,7 +76,17 @@ class Server(object):
                 listening_socket, address = self.listen_socket.accept()
                 print("connected listening socket: {}".format(listening_socket))
                 name = self.receive_mes(listening_socket)
-                self.client_dict[name] = listening_socket
+                # if already signed up once:
+                if name in self.client_dict:
+                    del self.client_dict[name]
+                # gets string of connected contacts
+                options = ','.join(self.client_dict.keys())
+                print(options)
+                # sends options to client:
+                self.send_mes(options.encode(), listening_socket)
+                # adds to options
+                if name not in self.client_dict:
+                    self.client_dict[name] = listening_socket
                 client_thread = threading.Thread(target=self.make_call)
                 client_thread.start()
 
@@ -99,11 +109,6 @@ class Server(object):
         print("connected call socket: {}".format(call_socket))
         # gets name of user making the call:
         caller_name = self.receive_mes(call_socket)
-        # gets all keys of the dictionary, all potential receivers:
-        options = ','.join(self.client_dict.keys())
-        print(options)
-        # sends options to calling client:
-        self.send_mes(options.encode(), call_socket)
         # gets from calling client user they want to call:
         receiver_name = self.receive_mes(call_socket)
         # gets receivers socket from dictionary

@@ -95,6 +95,10 @@ class Client(object):
         self.listen_socket = self.start_socket(IP, LISTEN_PORT)
         # sends name for dictionary
         self.send_mes(self.my_name.encode(), self.listen_socket)
+        # gets and sets calling options
+        calling_options = self.receive_mes(self.listen_socket)
+        print("options: {}".format(calling_options))
+        self.connected = calling_options.split(',')
         """
         # gets call or nah:
         mes = self.receive_mes(self.listen_socket)
@@ -118,10 +122,6 @@ class Client(object):
         print("yay!!!!!!!!!!!!!")
         # sends name
         self.send_mes(self.my_name.encode(), self.call_socket)
-        # gets and sets calling options
-        calling_options = self.receive_mes(self.call_socket)
-        print("options: {}".format(calling_options))
-        self.connected = calling_options.split(',')
 
     def ask_to_call(self, calling):
         """
@@ -129,12 +129,14 @@ class Client(object):
         tries call?
         """
         self.send_mes(calling.encode(), self.call_socket)
+        """
         answer = self.receive_mes(self.call_socket)
         if answer.startswith("no"):
             print("didn't answer")
             self.call_socket.close()
         else:
             self.start_call(calling)
+        """
 
     def start_call(self, calling):
         print("yay!, starting call")
