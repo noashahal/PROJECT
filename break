@@ -1,0 +1,25 @@
+def on_click(e):
+    # The button click function
+    # We want to display a small window
+    # 'Message' = The text in the window
+    # 'Title' = The window's title
+    # wx.OK = button style – in this case ok button
+    wx.MessageBox('thank you for clicking me', 'Thank <3', wx.OK)
+
+
+def main():
+    """
+    """
+    # a simple wx frame
+    app = wx.App()
+    frame = wx.Frame(None, -1, 'Noas Amazing Facetime', size=(1600, 800))
+    pnl = wx.Panel(frame)
+    name_enter =
+    btn = wx.Button(pnl, label='Call', pos=(600, 300))
+    # wx.EVT_BUTTON = The type of event
+    # on_click = The function that will be called when an event occurs
+    btn.Bind(wx.EVT_BUTTON, on_click)
+    # Shows the window
+    frame.Show()
+    # Keeps the window open, and awaits events
+    app.MainLoop()
