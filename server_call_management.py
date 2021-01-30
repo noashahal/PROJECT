@@ -116,8 +116,7 @@ class Server(object):
             print("boi bye")
             sys.exit(EXIT)
         receiver_sock = self.client_dict[receiver_name]
-        """
-        mes = "{} is calling you. do you accept (send Y/N)".format(caller_name)
+        mes = "{} is calling you".format(caller_name)
         self.send_mes(mes.encode(), receiver_sock)
         answer = self.receive_mes(receiver_sock)
         if answer == "Y":
@@ -125,8 +124,6 @@ class Server(object):
             self.start_call()
         else:
             self.send_mes("no call".encode(), call_socket)
-        """
-
 
     @staticmethod
     def start_call():

@@ -26,6 +26,8 @@ class Client(object):
         self.call_socket = None
         self.my_name = name
         self.connected = []
+        self.being_called = False
+        self.person_calling = ""
         self.initiate()
 
     @staticmethod
@@ -77,13 +79,13 @@ class Client(object):
         listen_thread = threading.Thread(target=self.listener)
         listen_thread.start()
 
-    def initiate_calling(self):
+    def initiate_calling(self, calling):
         """
         initiates thread:
         calling
         only initiated once btn pushed
         """
-        call_thread = threading.Thread(target=self.caller)
+        call_thread = threading.Thread(target=self.caller, args=calling)
         call_thread.start()
 
     def listener(self):
@@ -99,21 +101,20 @@ class Client(object):
         calling_options = self.receive_mes(self.listen_socket)
         print("options: {}".format(calling_options))
         self.connected = calling_options.split(',')
+        print("options anotha one: {}".format(self.connected))
+        self.get_call()
+
+    def get_call(self):
         """
-        # gets call or nah:
+        gets call, answers or declines
+        """
+        # gets person calling
         mes = self.receive_mes(self.listen_socket)
         print(mes)
-        answer = input()
-        self.send_mes(answer.encode(), self.listen_socket)
-        if answer == "Y":
-            calling = str(mes).split()[PERSON_CALLING]
-            self.start_call(calling)
-        else:
-            print("bye guys, not listening no more")
-            self.listen_socket.close()  # won't happen forreal
-        """
+        self.person_calling = str(mes).split()[PERSON_CALLING]
+        self.being_called = True
 
-    def caller(self):
+    def caller(self, calling):
         """
         checks if wants to call if so, gets options and calls
         """
@@ -122,31 +123,32 @@ class Client(object):
         print("yay!!!!!!!!!!!!!")
         # sends name
         self.send_mes(self.my_name.encode(), self.call_socket)
-
-    def ask_to_call(self, calling):
-        """
-        gets from gui desired user to call
-        tries call?
-        """
         self.send_mes(calling.encode(), self.call_socket)
-        """
         answer = self.receive_mes(self.call_socket)
         if answer.startswith("no"):
             print("didn't answer")
             self.call_socket.close()
         else:
             self.start_call(calling)
-        """
 
     def start_call(self, calling):
+        """
+        starts call - if answered positive
+        """
         print("yay!, starting call")
         client_backup.main(calling, self.my_name)
 
-    def print(self, x):
+    def dont_answer(self):
         """
-        prints
+        if client doesnt want to answer call
         """
-        print(x)
+        self.send_mes("N".encode(), self.listen_socket)
+
+    def answer(self):
+        """
+        if client wants to answer
+        """
+        self.send_mes("Y".encode(), self.listen_socket)
 
 
 def main(name):
@@ -160,5 +162,3 @@ def main(name):
 
 if __name__ == '__main__':
     main("Noa")
-
-
