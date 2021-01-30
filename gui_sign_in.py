@@ -61,6 +61,9 @@ class GuiAll(wx.Frame):
         self.Centre()
         self.Show(True)
 
+    def close(self):
+        self.Close(True)
+
 
 class GuiSignIn(GuiAll):
     """
@@ -144,6 +147,7 @@ class GuiCallOrWait(GuiAll):
         while not self.client.being_called:
             time.sleep(TIME_SLEEP)
             print("waiting for call")
+        self.close()
         GuiGettingCalled(self.client)
         #wait_for_call_thread = threading.Thread(target=self.check_if_call)
         #wait_for_call_thread.start()
