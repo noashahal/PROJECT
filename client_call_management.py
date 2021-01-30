@@ -28,6 +28,7 @@ class Client(object):
         self.connected = []
         self.being_called = False
         self.person_calling = ""
+        self.chosen_contact = ""
         self.initiate()
 
     @staticmethod
@@ -85,7 +86,8 @@ class Client(object):
         calling
         only initiated once btn pushed
         """
-        call_thread = threading.Thread(target=self.caller, args=calling)
+        self.chosen_contact = calling
+        call_thread = threading.Thread(target=self.caller)
         call_thread.start()
 
     def listener(self):
@@ -114,7 +116,7 @@ class Client(object):
         self.person_calling = str(mes).split()[PERSON_CALLING]
         self.being_called = True
 
-    def caller(self, calling):
+    def caller(self):
         """
         checks if wants to call if so, gets options and calls
         """
@@ -123,13 +125,13 @@ class Client(object):
         print("yay!!!!!!!!!!!!!")
         # sends name
         self.send_mes(self.my_name.encode(), self.call_socket)
-        self.send_mes(calling.encode(), self.call_socket)
+        self.send_mes(self.chosen_contact.encode(), self.call_socket)
         answer = self.receive_mes(self.call_socket)
         if answer.startswith("no"):
             print("didn't answer")
             self.call_socket.close()
         else:
-            self.start_call(calling)
+            self.start_call(self.chosen_contact)
 
     def start_call(self, calling):
         """

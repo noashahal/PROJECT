@@ -139,8 +139,10 @@ class GuiCallOrWait(GuiAll):
         self.Close(True)
 
     def on_wait(self, e):
-        wait_for_call_thread = threading.Thread(target=self.check_if_call)
-        wait_for_call_thread.start()
+        while self.client.being_called:
+            GuiGettingCalled(self.client)
+        #wait_for_call_thread = threading.Thread(target=self.check_if_call)
+        #wait_for_call_thread.start()
         self.Close(True)
 
     def check_if_call(self, e):
