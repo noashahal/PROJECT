@@ -61,6 +61,7 @@ class Server(object):
         """
         gets chunk and sends to server
         """
+        print("mes "+mes.decode())
         length = len(mes)
         data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
         sock.send(data)
@@ -115,6 +116,7 @@ class Server(object):
         mes = "{} is calling you".format(caller_name)
         self.send_mes(mes.encode(), receiver_sock)
         answer = self.receive_mes(receiver_sock)
+        print("answer from {}: {}".format(receiver_name, answer))
         if answer == "Y":
             self.send_mes("call".encode(), call_socket)
             self.start_call()

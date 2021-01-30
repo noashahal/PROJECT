@@ -68,6 +68,7 @@ class Client(object):
         """
         gets chunk and sends to server
         """
+        print("mes "+mes.decode())
         length = len(mes)
         data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
         sock.send(data)
@@ -101,9 +102,8 @@ class Client(object):
         self.send_mes(self.my_name.encode(), self.listen_socket)
         # gets and sets calling options
         calling_options = self.receive_mes(self.listen_socket)
-        print("options: {}".format(calling_options))
+        print("options listener: {}".format(calling_options))
         self.connected = calling_options.split(',')
-        print("options anotha one: {}".format(self.connected))
         self.get_call()
 
     def get_call(self):
@@ -112,9 +112,10 @@ class Client(object):
         """
         # gets person calling
         mes = self.receive_mes(self.listen_socket)
-        print(mes)
+        print("get call: {}".format(mes))
         self.person_calling = str(mes).split()[PERSON_CALLING]
         self.being_called = True
+        print("made being called True: {}".format(self.being_called))
 
     def caller(self):
         """
@@ -144,13 +145,16 @@ class Client(object):
         """
         if client doesnt want to answer call
         """
+        print("got to dont answer")
         self.send_mes("N".encode(), self.listen_socket)
 
     def answer(self):
         """
         if client wants to answer
         """
+        print("got to answer")
         self.send_mes("Y".encode(), self.listen_socket)
+        self.start_call(self.person_calling)
 
 
 def main(name):

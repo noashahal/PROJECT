@@ -8,7 +8,7 @@ from winreg import *
 #from constants import *
 import pyaudio
 VALUES_COUNT = 2
-IP = "192.168.1.21"  # IP ADDRESS
+IP = "127.0.0.1"  # IP ADDRESS
 SEND_VIDEO_PORT = 1114
 RECEIVE_VIDEO_PORT = 1113
 SEND_AUDIO_PORT = 1111

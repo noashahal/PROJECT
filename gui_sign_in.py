@@ -141,15 +141,13 @@ class GuiCallOrWait(GuiAll):
 
     def on_wait(self, e):
         print("waiting")
-        while self.client.being_called:
-            GuiGettingCalled(self.client)
+        while not self.client.being_called:
+            time.sleep(TIME_SLEEP)
+            print("waiting for call")
+        GuiGettingCalled(self.client)
         #wait_for_call_thread = threading.Thread(target=self.check_if_call)
         #wait_for_call_thread.start()
         #self.Close(True)
-
-    def check_if_call(self, e):
-        while self.client.being_called:
-            GuiGettingCalled(self.client)
 
 
 class GuiCallOptions(GuiAll):
@@ -201,42 +199,51 @@ class GuiWait(GuiAll):
         self.start()
 
 
-class GuiGettingCalled(wx.Frame):
+class GuiGettingCalled(GuiAll):
     """
     window which opens when getting called
     """
     def __init__(self, client):
         super().__init__(None, title="BRINGGGGG")
-        self.SetSize((600, LENGTH))
-        # The client object
+
         self.client = client
         # person calling this user
         self.person_calling = self.client.person_calling
-        # panel:
-        self.pnl = wx.Panel(self)  # creates panel
-        self.sb = wx.StaticBox(self.pnl)  # sequence of items
-        self.sbs = wx.BoxSizer(wx.VERTICAL)  # boarder
+
         # text:
         text_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        label = str(self.person_calling) + " is calling you"
+        label = str(self.person_calling) + " is calling"
         wait_text = wx.StaticText(self.pnl, label=label)
         text_sizer.Add(window=wait_text, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         # buttons:
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         # call button
         answer_btn = wx.Button(self.pnl, label="answer")
-        answer_btn.Bind(wx.EVT_BUTTON, self.client.answer)
+        answer_btn.Bind(wx.EVT_BUTTON, self.on_answer)
         # wait for call button
         dont_answer_btn = wx.Button(self.pnl, label="dont")
-        dont_answer_btn.Bind(wx.EVT_BUTTON, self.client.dont_answer)
+        dont_answer_btn.Bind(wx.EVT_BUTTON, self.on_dont_answer)
         btn_sizer.Add(window=answer_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         btn_sizer.Add(window=dont_answer_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         # sizers:
         self.sbs.Add(text_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         self.sbs.Add(btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        self.SetSizer(self.sbs)
-        self.Centre()
-        self.Show(True)
+
+        self.start()
+
+    def on_answer(self, e):
+        """
+        when answer clicked
+        """
+        self.Close(True)
+        self.client.answer()
+
+    def on_dont_answer(self, e):
+        """
+        when dont answer clicked
+        """
+        self.Close(True)
+        self.client.dont_answer()
 
 
 def main():
