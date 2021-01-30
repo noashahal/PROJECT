@@ -76,17 +76,13 @@ class Server(object):
                 listening_socket, address = self.listen_socket.accept()
                 print("connected listening socket: {}".format(listening_socket))
                 name = self.receive_mes(listening_socket)
-                # if already signed up once:
-                if name in self.client_dict:
-                    del self.client_dict[name]
+                # add to options:
+                self.client_dict[name] = listening_socket
                 # gets string of connected contacts
                 options = ','.join(self.client_dict.keys())
                 print(options)
                 # sends options to client:
                 self.send_mes(options.encode(), listening_socket)
-                # adds to options
-                if name not in self.client_dict:
-                    self.client_dict[name] = listening_socket
                 client_thread = threading.Thread(target=self.make_call)
                 client_thread.start()
 
