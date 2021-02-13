@@ -1,6 +1,6 @@
 import wx
 from client_call_management import *
-# from simple_window_2 import *
+#from simple_window_2 import *
 WIDTH = 300
 LENGTH = 250
 START = 0
@@ -9,12 +9,11 @@ BORDER = 5
 
 class GuiAll(wx.Frame):
     """
-
     """
     def __init__(self, e, title):
         super().__init__(e, title=title)
         self.SetSize((WIDTH, LENGTH))
-        # self.Centre()
+        #self.Centre()
 
         # The combo box (drop down menu)
         self.combo_box = None
@@ -114,6 +113,7 @@ class GuiCallOrWait(GuiAll):
         self.options = self.client.connected
         self.init_ui()
 
+
     def init_ui(self):
         """
         call window
@@ -135,8 +135,8 @@ class GuiCallOrWait(GuiAll):
         self.start()
 
     def on_call(self, e):
-        # self.client.initiate_calling()
-        # self.options = self.client.connected
+        #self.client.initiate_calling()
+        #self.options = self.client.connected
         print("call or wait options: {}".format(self.options))
         GuiCallOptions(self.client, self.username)
         self.Close(True)
@@ -146,25 +146,20 @@ class GuiCallOrWait(GuiAll):
         while not self.client.being_called:
             time.sleep(TIME_SLEEP)
             print("waiting for call")
-        GuiGettingCalled(self.client, self.username)
         self.close()
-
-        # wait_for_call_thread = threading.Thread(target=self.check_if_call)
-        # wait_for_call_thread.start()
-        # self.Close(True)
-
-    def check_if_call(self, e):
-        while self.client.being_called:
-            GuiGettingCalled(self.client, self.username)
+        GuiGettingCalled(self.client)
+        #wait_for_call_thread = threading.Thread(target=self.check_if_call)
+        #wait_for_call_thread.start()
+        #self.Close(True)
 
 
 class GuiCallOptions(GuiAll):
 
     def __init__(self, client, username):
         super().__init__(None, "Options Window")
-        # self.text = wx.TextCtrl(self.pnl, style=wx.TE_MULTILINE)
-        self.client = client
+        #self.text = wx.TextCtrl(self.pnl, style=wx.TE_MULTILINE)
         self.username = username
+        self.client = client
         options = self.client.connected
         if self.username in options:
             options.remove(self.username)
@@ -188,23 +183,9 @@ class GuiCallOptions(GuiAll):
         """
         calling = self.options_lstbox.GetString(self.options_lstbox.GetSelection())
         print(calling)
-        GuiWait()
-        #self.client.initiate_calling(calling)
-        answered_thread = threading.Thread(target=self.answered_call)
-        answered_thread.start()
+        self.client.initiate_calling(calling)
         self.Close(True)
-
-    def answered_call(self):
-        """
-        checks if client answered
-        """
-        while not self.client.answered_call:
-            time.sleep(TIME_SLEEP)
-            print("waiting for answer")
-        if self.client.answer:
-            self.client.initiate_calling()
-        else:
-            GuiCallOrWait(self.username)
+        GuiWait()
 
 
 class GuiWait(GuiAll):
@@ -228,9 +209,9 @@ class GuiGettingCalled(GuiAll):
     """
     window which opens when getting called
     """
-    def __init__(self, client, username):
-        super().__init__(None, title="BRINGGGGG")
-        self.username = username
+    def __init__(self, client):
+        super().__init__(None, "BRINGGGGG")
+
         self.client = client
         # person calling this user
         self.person_calling = self.client.person_calling
@@ -262,39 +243,13 @@ class GuiGettingCalled(GuiAll):
         """
         self.Close(True)
         self.client.answer()
-        # GuiEnd(self.client)
 
     def on_dont_answer(self, e):
         """
         when dont answer clicked
         """
-        self.close()
-        GuiCallOrWait(self.username)
+        self.Close(True)
         self.client.dont_answer()
-
-
-class GuiEnd(GuiAll):
-    """
-       window which opens when getting called
-       """
-
-    def __init__(self, client):
-        super().__init__(None, title="call")
-
-        self.client = client
-        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        end_btn = wx.Button(self.pnl, label="end call")
-        end_btn.Bind(wx.EVT_BUTTON, self.on_end)
-        btn_sizer.Add(window=end_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        self.sbs.Add(btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-
-        self.start()
-
-    def on_end(self, e):
-        """
-        when wants to end call
-        """
-        self.client.end_call()
 
 
 def main():

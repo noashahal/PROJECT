@@ -27,8 +27,6 @@ class Client(object):
         self.my_name = name
         self.connected = []
         self.being_called = False
-        self.answered_call = False
-        self.answer = False
         self.person_calling = ""
         self.chosen_contact = ""
         self.initiate()
@@ -130,21 +128,18 @@ class Client(object):
         self.send_mes(self.my_name.encode(), self.call_socket)
         self.send_mes(self.chosen_contact.encode(), self.call_socket)
         answer = self.receive_mes(self.call_socket)
-        self.answered_call = True
         if answer.startswith("no"):
             print("didn't answer")
-            self.answer = False
-            #self.call_socket.close()
+            self.call_socket.close()
         else:
-            self.answer = True
-            #self.start_call(self.chosen_contact)
+            self.start_call(self.chosen_contact)
 
-    def start_call(self):
+    def start_call(self, calling):
         """
         starts call - if answered positive
         """
         print("yay!, starting call")
-        client_backup.main(self.chosen_contact, self.my_name)
+        client_backup.main(calling, self.my_name)
 
     def dont_answer(self):
         """
@@ -160,9 +155,6 @@ class Client(object):
         print("got to answer")
         self.send_mes("Y".encode(), self.listen_socket)
         self.start_call(self.person_calling)
-
-    def end_call(self):
-        client_backup.close_all()
 
 
 def main(name):
