@@ -143,7 +143,7 @@ class Client(object):
 
     def dont_answer(self):
         """
-        if client doesnt want to answer call
+        if client doesnt want to answer callmad
         """
         print("got to dont answer")
         self.send_mes("N".encode(), self.listen_socket)

@@ -14,7 +14,7 @@ class GuiAll(wx.Frame):
         super().__init__(e, title=title)
         self.SetSize((WIDTH, LENGTH))
         #self.Centre()
-
+        self.lock = threading.Lock()
         # The combo box (drop down menu)
         self.combo_box = None
         # The client object
@@ -113,7 +113,6 @@ class GuiCallOrWait(GuiAll):
         self.options = self.client.connected
         self.init_ui()
 
-
     def init_ui(self):
         """
         call window
@@ -125,13 +124,14 @@ class GuiCallOrWait(GuiAll):
         call_btn = wx.Button(self.pnl, label="make call")
         call_btn.Bind(wx.EVT_BUTTON, self.on_call)
         # wait for call button
-        wait_btn = wx.Button(self.pnl, label="wait for call")
-        wait_btn.Bind(wx.EVT_BUTTON, self.on_wait)
+        #wait_btn = wx.Button(self.pnl, label="wait for call")
+        #wait_btn.Bind(wx.EVT_BUTTON, self.on_wait)
         # size
         call_btn_sizer.Add(window=call_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        call_btn_sizer.Add(window=wait_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        #call_btn_sizer.Add(window=wait_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         self.sbs.Add(call_btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-
+        wait_for_call_thread = threading.Thread(target=self.on_wait)
+        wait_for_call_thread.start()
         self.start()
 
     def on_call(self, e):
@@ -141,16 +141,19 @@ class GuiCallOrWait(GuiAll):
         GuiCallOptions(self.client, self.username)
         self.Close(True)
 
+   # def threadthing(self):
+
     def on_wait(self, e):
+        self.lock.acquire()
         print("waiting")
         while not self.client.being_called:
             time.sleep(TIME_SLEEP)
             print("waiting for call")
-        self.close()
+        #self.close()
+        print("got here")
+        self.Close(True)
+        self.lock.release()
         GuiGettingCalled(self.client)
-        #wait_for_call_thread = threading.Thread(target=self.check_if_call)
-        #wait_for_call_thread.start()
-        #self.Close(True)
 
 
 class GuiCallOptions(GuiAll):
@@ -211,11 +214,11 @@ class GuiGettingCalled(GuiAll):
     """
     def __init__(self, client):
         super().__init__(None, "BRINGGGGG")
-
+        print("here at gui getting called")
         self.client = client
         # person calling this user
         self.person_calling = self.client.person_calling
-
+        print("{} is calling".format(self.person_calling))
         # text:
         text_sizer = wx.BoxSizer(wx.HORIZONTAL)
         label = str(self.person_calling) + " is calling"
@@ -234,8 +237,9 @@ class GuiGettingCalled(GuiAll):
         # sizers:
         self.sbs.Add(text_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         self.sbs.Add(btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-
+        print("starting window you want:")
         self.start()
+        print("started")
 
     def on_answer(self, e):
         """
