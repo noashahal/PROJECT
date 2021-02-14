@@ -1,4 +1,7 @@
 import wx
+
+import win32ui
+import win32con
 from client_call_management import *
 #from simple_window_2 import *
 WIDTH = 300
@@ -154,13 +157,14 @@ class GuiSignIn(GuiAll):
         thread = threading.Thread(target=self.open)
         thread.start()
 
-
-
     def open(self):
         #self.lock.acquire()
         #thread = threading.Thread(target=GuiRandom)
         #thread.start()
-        GuiRandom()
+        if win32ui.MessageBox("dude", "someone is calling", win32con.MB_YESNOCANCEL) == win32con.IDYES:
+            print("hey")
+        else:
+            print("not hey")
         #self.lock.release()
 
 

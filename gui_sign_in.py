@@ -1,4 +1,6 @@
 import wx
+import win32ui
+import win32con
 from client_call_management import *
 #from simple_window_2 import *
 WIDTH = 300
@@ -141,19 +143,43 @@ class GuiCallOrWait(GuiAll):
         GuiCallOptions(self.client, self.username)
         self.Close(True)
 
-   # def threadthing(self):
-
-    def on_wait(self, e):
-        self.lock.acquire()
+    def on_wait(self):
+        #self.lock.acquire()
         print("waiting")
         while not self.client.being_called:
             time.sleep(TIME_SLEEP)
             print("waiting for call")
         #self.close()
-        print("got here")
         self.Close(True)
-        self.lock.release()
-        GuiGettingCalled(self.client)
+        self.getting_called()
+        #self.lock.release()
+        #GuiGettingCalled(self.client)
+
+    def getting_called(self):
+        """
+        when gets a call
+        """
+        person_calling = self.client.person_calling
+        if win32ui.MessageBox("{} is calling you. Do you want to answer?".format(self.client.person_calling),
+                              "Bringgggg", win32con.MB_YESNOCANCEL) == win32con.IDYES:
+            self.on_answer()
+        else:
+            self.on_dont_answer()
+
+    def on_answer(self):
+        """
+        when answer clicked
+        """
+        #self.Close(True)
+        self.client.answer()
+
+    def on_dont_answer(self):
+        """
+        when dont answer clicked
+        """
+        #self.Close(True)
+        self.client.dont_answer()
+        GuiCallOrWait(self.username)
 
 
 class GuiCallOptions(GuiAll):
