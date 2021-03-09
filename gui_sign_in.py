@@ -144,16 +144,16 @@ class GuiCallOrWait(GuiAll):
         self.Close(True)
 
     def on_wait(self):
-        #self.lock.acquire()
+        """
+        waits for someone to call
+        """
         print("waiting")
         while not self.client.being_called:
             time.sleep(TIME_SLEEP)
-            print("waiting for call")
+            #print("waiting for call")
         #self.close()
         self.Close(True)
         self.getting_called()
-        #self.lock.release()
-        #GuiGettingCalled(self.client)
 
     def getting_called(self):
         """
@@ -179,7 +179,7 @@ class GuiCallOrWait(GuiAll):
         """
         #self.Close(True)
         self.client.dont_answer()
-        GuiCallOrWait(self.username)
+        #GuiCallOrWait(self.username)
 
 
 class GuiCallOptions(GuiAll):
@@ -214,15 +214,17 @@ class GuiCallOptions(GuiAll):
         print(calling)
         self.client.initiate_calling(calling)
         self.Close(True)
-        GuiWait()
+        GuiWait(self.username, self.client)
 
 
 class GuiWait(GuiAll):
     """
     window in which waits for answer
     """
-    def __init__(self):
+    def __init__(self, username, client):
         super().__init__(None, "Wait Window")
+        self.username = username
+        self.client = client
         self.init_ui()
 
     def init_ui(self):
@@ -230,8 +232,37 @@ class GuiWait(GuiAll):
         wait_text = wx.StaticText(self.pnl, label='Waiting For Answer....')
         text_sizer.Add(window=wait_text, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         self.sbs.Add(text_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-
+        wait_for_answer_thread = threading.Thread(target=self.on_wait_for_answer)
+        wait_for_answer_thread.start()
         self.start()
+
+    def on_wait_for_answer(self):
+        """
+        waits for someone to call
+        """
+        print("waiting")
+        while not self.client.answered_call:
+            time.sleep(TIME_SLEEP)
+            print("waiting for call")
+        #self.close()
+        self.Close(True)
+        if self.client.answered:  # if answered, starts call
+            self.client.start_call(self.client.chosen_contact)
+        else:
+            self.didnt_answer_window()
+
+    def didnt_answer_window(self):
+        """
+        if user didnt answer, gives 2 options
+        back to main window or disconnect
+        """
+        if win32ui.MessageBox("user didnt answer :( go back to main window?", "didnt answer!!",
+                              win32con.MB_YESNOCANCEL) == win32con.IDYES:
+
+            GuiCallOrWait(self.username)
+        else:
+            self.client.close()
+            self.Close(True)
 
 
 class GuiGettingCalled(GuiAll):
@@ -288,9 +319,12 @@ def main():
     creates a GUI.
     when user quits, ends loop.
     """
-    ex = wx.App()
+    ex = []
+    ex = wx.App(None)
+    # ex = wx.App()
     GuiSignIn()
     ex.MainLoop()
+    # del ex
 
 
 if __name__ == '__main__':

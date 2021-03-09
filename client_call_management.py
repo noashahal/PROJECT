@@ -26,7 +26,9 @@ class Client(object):
         self.call_socket = None
         self.my_name = name
         self.connected = []
-        self.being_called = False
+        self.being_called = False  # for loop checks if being called
+        self.answered_call = False  # for loop checks if call was answered
+        self.answered = False  # answer from other user
         self.person_calling = ""
         self.chosen_contact = ""
         self.initiate()
@@ -130,9 +132,12 @@ class Client(object):
         answer = self.receive_mes(self.call_socket)
         if answer.startswith("no"):
             print("didn't answer")
+            self.answered = False
             self.call_socket.close()
         else:
-            self.start_call(self.chosen_contact)
+            self.answered = True
+            #self.start_call(self.chosen_contact)
+        self.answered_call = True
 
     def start_call(self, calling):
         """
@@ -143,7 +148,7 @@ class Client(object):
 
     def dont_answer(self):
         """
-        if client doesnt want to answer callmad
+        if client doesnt want to answer call
         """
         print("got to dont answer")
         self.send_mes("N".encode(), self.listen_socket)
