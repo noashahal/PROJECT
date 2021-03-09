@@ -112,7 +112,7 @@ class GuiCallOrWait(GuiAll):
         super().__init__(None, "Call Window")
         self.username = username
         self.start_client(username)
-        self.options = self.client.connected
+        #self.options = self.client.connected
         self.init_ui()
 
     def init_ui(self):
@@ -139,7 +139,7 @@ class GuiCallOrWait(GuiAll):
     def on_call(self, e):
         #self.client.initiate_calling()
         #self.options = self.client.connected
-        print("call or wait options: {}".format(self.options))
+        #print("call or wait options: {}".format(self.options))
         GuiCallOptions(self.client, self.username)
         self.Close(True)
 
@@ -189,11 +189,11 @@ class GuiCallOptions(GuiAll):
         #self.text = wx.TextCtrl(self.pnl, style=wx.TE_MULTILINE)
         self.username = username
         self.client = client
-        options = self.client.connected
-        if self.username in options:
-            options.remove(self.username)
-        print("call options, options: {}".format(options))
-        self.options_lstbox = wx.ListBox(self.pnl, choices=options, style=wx.LB_SINGLE, name="contacts")
+        self.options = self.client.connected
+        if self.username in self.options:
+            self.options.remove(self.username)
+        print("call options, options: {}".format(self.options))
+        self.options_lstbox = wx.ListBox(self.pnl, choices=self.options, style=wx.LB_SINGLE, name="contacts")
         self.init_ui()
 
     def init_ui(self):

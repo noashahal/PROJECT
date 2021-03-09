@@ -2,13 +2,15 @@ import threading
 import sys
 import socket
 import server_backup
-TIME_SLEEP = 0.1
+import time
+TIME_SLEEP = 0.5
 MAX_CHUNK_SIZE = 10  # for zfill - len of messages
 EXIT = -1
 LISTEN = 10
 IP = '0.0.0.0'
 LISTEN_PORT = 1000
 CALL_PORT = 1001
+USERS_PORT = 1002
 WAIT_KEY = 1
 
 
@@ -18,6 +20,7 @@ class Server(object):
         try:
             self.call_socket = self.start_socket(IP, CALL_PORT)
             self.listen_socket = self.start_socket(IP, LISTEN_PORT)
+            self.users_socket = self.start_socket(IP, USERS_PORT)
             self.client_dict = {}
         except socket.error as e:
             print("socket creation fail: ", e)
@@ -84,6 +87,8 @@ class Server(object):
                 print(options)
                 # sends options to client:
                 self.send_mes(options.encode(), listening_socket)
+                users_thread = threading.Thread(target=self.users)
+                users_thread.start()
                 client_thread = threading.Thread(target=self.make_call)
                 client_thread.start()
 
@@ -93,6 +98,18 @@ class Server(object):
             except Exception as msg:
                 print("exception: ", msg)
                 done = True
+
+    def users(self):
+        """
+        refreshes users constantly
+        """
+        users_socket, address = self.users_socket.accept()
+        while True:
+            # gets string of connected contacts
+            options = ','.join(self.client_dict.keys())
+            # sends options to client:
+            self.send_mes(options.encode(), users_socket)
+            time.sleep(TIME_SLEEP)
 
     def make_call(self):
         """

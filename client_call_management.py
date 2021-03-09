@@ -4,12 +4,14 @@ import client_backup
 import socket
 import time
 TIME_SLEEP = 0.1
+TIME_SLEEP_USERS = 0.5
 MAX_CHUNK_SIZE = 10  # for zfill - len of messages
 EXIT = -1
 LISTEN = 10
 IP = '127.0.0.1'
 LISTEN_PORT = 1000
 CALL_PORT = 1001
+USERS_PORT = 1002
 WAIT_KEY = 1
 PERSON_CALLING = 0
 
@@ -24,6 +26,7 @@ class Client(object):
         """
         self.listen_socket = None
         self.call_socket = None
+        self.users_socket = None
         self.my_name = name
         self.connected = []
         self.being_called = False  # for loop checks if being called
@@ -82,6 +85,8 @@ class Client(object):
         """
         listen_thread = threading.Thread(target=self.listener)
         listen_thread.start()
+        users_thread = threading.Thread(target=self.users)
+        users_thread.start()
 
     def initiate_calling(self, calling):
         """
@@ -107,6 +112,20 @@ class Client(object):
         print("options listener: {}".format(calling_options))
         self.connected = calling_options.split(',')
         self.get_call()
+
+    def users(self):
+        """
+        connects with users socket,
+        refreshes connected every two seconds
+        """
+        # connects users socket:
+        self.users_socket = self.start_socket(IP, USERS_PORT)
+        while True:
+            # gets and sets calling options
+            calling_options = self.receive_mes(self.users_socket)
+            #print("options listener: {}".format(calling_options))
+            self.connected = calling_options.split(',')
+            time.sleep(TIME_SLEEP_USERS)
 
     def get_call(self):
         """
