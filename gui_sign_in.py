@@ -23,7 +23,8 @@ class GuiAll(wx.Frame):
         self.client = None
 
         # panel:
-        self.pnl = wx.Panel(self)  # creates panel
+        self.pnl = wx.Panel(self)  # creates
+        self.pnl.SetBackgroundColour(wx.Colour('SLATE BLUE'))
         self.sb = wx.StaticBox(self.pnl)  # sequence of items
         self.sbs = wx.BoxSizer(wx.VERTICAL)  # boarder
 
