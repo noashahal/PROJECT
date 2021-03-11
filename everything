@@ -1,0 +1,1552 @@
+import threading
+import sys
+import socket
+#import numpy as np
+#import cv2 as cv
+import time
+#import pyaudio
+#from constants import *
+EXIT = -1
+LISTEN = 10
+IP = '0.0.0.0'
+SEND_VIDEO_PORT = 1113
+RECEIVE_VIDEO_PORT = 1114
+SEND_AUDIO_PORT = 1112
+RECEIVE_AUDIO_PORT = 1111
+GET_CLIENT_NAME = 1
+SOCKET_IN_MESSAGE = 1
+BUF = 512  # size of video chunk
+WIDTH = 640
+HEIGHT = 480
+RANGE_START = 0
+CAPTURE = 0
+TIME_SLEEP = 5
+WID = 3
+HIGH = 4
+WAIT_KEY = 1
+END = 0
+MAX_CHUNK_SIZE = 10  # for zfill - len of messages
+CHUNK = 1024
+
+
+class Server(object):
+    def __init__(self):
+        """ constructor"""
+        self.server_socket = None
+        try:
+            self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
+            print('started socket at ip {} port {}'.format(IP, RECEIVE_VIDEO_PORT))
+            self.send_video_socket = self.start_socket(IP, SEND_VIDEO_PORT)
+            print('started socket at ip {} port {}'.format(IP, SEND_VIDEO_PORT))
+            self.receive_audio_socket = self.start_socket(IP, RECEIVE_AUDIO_PORT)
+            print('started socket at ip {} port {}'.format(IP, RECEIVE_AUDIO_PORT))
+            self.send_audio_socket = self.start_socket(IP, SEND_AUDIO_PORT)
+            print('started socket at ip {} port {}'.format(IP, SEND_AUDIO_PORT))
+            self.client_video_dict = {}
+            self.client_audio_dict = {}
+
+        except socket.error as e:
+            print("socket creation fail: ", e)
+            sys.exit(EXIT)
+        except Exception as e:
+            print("server construct fail: ", e)
+            sys.exit(EXIT)
+
+    @staticmethod
+    def start_socket(ip, port):
+        """
+        starts a socket with ip and port
+        """
+        sock = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
+        # the server binds itself to a certain socket
+        sock.bind((ip, port))
+        # listening to the socket
+        sock.listen(LISTEN)
+        return sock
+
+    @staticmethod
+    def send_mes(message, send_video_socket):
+        """
+        receives and sends message
+        """
+        message = message.encode()
+        size = (str(len(message)).zfill(MAX_CHUNK_SIZE)).encode()
+        send_video_socket.send(size + message)
+
+    def handle_clients(self):
+        """
+        handle a single client
+        accepts a connection request and call handle _client
+        for receiving its requests
+        """
+        done = False
+        while not done:
+            try:
+                # starts threads
+                receive_video_client_socket, address = self.receive_video_socket.accept()
+                print("connected relay video: {}".format(receive_video_client_socket))
+                video_thread = threading.Thread(target=self.start_video_relay,
+                                                args=(receive_video_client_socket, ))
+                audio_thread = threading.Thread(target=self.start_audio_relay)
+                video_thread.start()
+                audio_thread.start()
+
+            except socket.error as msg:
+                print("socket failure: ", msg)
+                done = True
+            except Exception as msg:
+                print("exception: ", msg)
+                done = True
+
+    def start_video_relay(self, receive_video_client_socket):
+        """
+        connects receive video socket,
+        gets name
+        calls receive_and_send_video with names socket
+        """
+        try:
+            self.add_video_client()
+            name = self.receive_mes(receive_video_client_socket)
+            print("calling: {}".format(name))
+            self.send_chunk("calling".encode(), receive_video_client_socket)
+            while name not in self.client_video_dict:
+                time.sleep(TIME_SLEEP)
+                print("waiting for the other client to connect")
+                self.send_chunk("wait".encode(), receive_video_client_socket)
+            self.send_chunk("start".encode(), receive_video_client_socket)
+            send_sock = self.client_video_dict[name]
+            self.receive_and_send_video(receive_video_client_socket, send_sock)
+        except socket.error as e:
+            print("socket video relay fail: ", e)
+            sys.exit(EXIT)
+        except Exception as e:
+            print("video relay exception: ", e)
+            sys.exit(EXIT)
+
+    def start_audio_relay(self):
+        """
+        connects receive audio socket,
+        gets name
+        calls receive_and_send_audio with names socket
+        """
+        try:
+            self.add_audio_client()
+            receive_audio_client_socket, address = self.receive_audio_socket.accept()
+            print("connected relay audio")
+            name = self.receive_mes(receive_audio_client_socket)
+            self.send_chunk("calling".encode(), receive_audio_client_socket)
+            while name not in self.client_audio_dict:
+                time.sleep(TIME_SLEEP)
+                print("waiting for the other client to connect")
+                self.send_chunk("wait".encode(), receive_audio_client_socket)
+            self.send_chunk("start".encode(), receive_audio_client_socket)
+            send_sock = self.client_audio_dict[name]
+            self.receive_and_send_audio(receive_audio_client_socket, send_sock)
+        except socket.error as e:
+            print("socket audio relay fail: ", e)
+            sys.exit(EXIT)
+        except Exception as e:
+            print("audio relay exception: ", e)
+            sys.exit(EXIT)
+
+    def add_video_client(self):
+        """
+        connects send video socket,
+        gets name
+        adds name to dictionary
+        """
+        try:
+            #print("starting receive video")
+            send_video_client_socket, address = self.send_video_socket.accept()
+            print("connected receive video: {}".format(send_video_client_socket))
+            my_name = self.receive_mes(send_video_client_socket)
+            self.client_video_dict[my_name] = send_video_client_socket
+            self.send_chunk("listening vid".encode(), send_video_client_socket)
+            print(self.client_video_dict)
+        except socket.error as e:
+            print("socket add video client fail: ", e)
+            sys.exit(EXIT)
+        except Exception as e:
+            print("add video client exception: ", e)
+            sys.exit(EXIT)
+
+    def add_audio_client(self):
+        """
+        connects send video socket,
+        gets name
+        adds name to dictionary
+        """
+        try:
+            send_audio_client_socket, address = self.send_audio_socket.accept()
+            print("connected receive audio")
+            my_name = self.receive_mes(send_audio_client_socket)
+            self.client_audio_dict[my_name] = send_audio_client_socket
+            self.send_chunk("listening audio".encode(), send_audio_client_socket)
+        except socket.error as e:
+            print("socket add audio client fail: ", e)
+            sys.exit(EXIT)
+        except Exception as e:
+            print("add audio client exception: ", e)
+            sys.exit(EXIT)
+
+    def receive_and_send_video(self, receive_video_socket, send_video_socket):
+        """
+        gets video from client and sends to other client
+        doesn't SHOW video
+        """
+        print("got to receive and send video")
+        try:
+            num_of_chunks = WIDTH * HEIGHT * WID / BUF
+            while True:
+                chunks = []
+                while len(chunks) < num_of_chunks:
+                    chunk = self.receive_chunk(receive_video_socket)
+                    self.send_chunk(chunk, send_video_socket)
+
+        except ConnectionAbortedError as e:
+            receive_video_socket.close()
+
+    @staticmethod
+    def receive_and_send_audio(receive_audio_socket, send_audio_socket):
+        """
+        gets audio chunk from one client, sends to other client
+        without playing audio!
+        different stream for sending and receiving!
+        """
+        i = 0
+        try:
+            while True:
+                i += 1
+                data = receive_audio_socket.recv(CHUNK)
+                print("got audio chunk number {} of length {}".format(i, len(data)))
+                if len(data) == 0:
+                    break
+                send_audio_socket.send(data)
+        except KeyboardInterrupt:
+            pass
+        print('Shutting down')
+        receive_audio_socket.close()
+        send_audio_socket.close()
+
+    @staticmethod
+    def send_chunk(chunk, send_socket):
+        """
+        gets chunk and sends to server
+        """
+        length = len(chunk)
+        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + chunk
+        send_socket.send(data)
+
+    @staticmethod
+    def receive_chunk(receive_video_socket):
+        """
+        gets chunk from server
+        """
+        raw_chunk_size = b''
+        raw_chunk_size_to_get = MAX_CHUNK_SIZE
+        while len(raw_chunk_size) < raw_chunk_size_to_get:
+            raw_chunk_size += receive_video_socket.recv(raw_chunk_size_to_get - len(raw_chunk_size))
+        try:
+            chunk_size = int(raw_chunk_size.decode())
+        except:
+            print('raw chunk size is {} its length is {}'.format(raw_chunk_size, len(raw_chunk_size)))
+        left = chunk_size
+        chunk = b''
+        while left > END:
+            chunk += receive_video_socket.recv(left)
+            left = left - len(chunk)
+        return chunk
+
+    @staticmethod
+    def receive_mes(client_socket):
+        """
+        receives and returns message from client
+        """
+        try:
+            raw_data = client_socket.recv(MAX_CHUNK_SIZE)
+            data = raw_data.decode()
+            mes = "invalid message"
+            if data.isdigit():
+                mes = client_socket.recv(int(data)).decode()
+                mes = str(mes)
+            return mes
+        except Exception as e:
+            client_socket.close()
+            print("Error in receive_mes: ", e)
+
+    def close_all(self):
+        """
+        closes all sockets and connections
+        """
+        self.receive_video_socket.close()
+        self.send_video_socket.close()
+        self.receive_audio_socket.close()
+        self.send_audio_socket.close()
+
+
+def main():
+    """
+    todo: write more
+    """
+    try:
+        srvr = Server()
+        srvr.handle_clients()
+    except socket.error as msg:
+        print("socket failure: ", msg)
+    except Exception as msg:
+        print("exception: ", msg)
+
+
+if __name__ == '__main__':
+    main()
+
+----------------------------------------------------------------------------------------------------------------------------------------------server backup
+import sys
+import threading
+import socket
+import numpy as np
+import cv2 as cv
+import time
+from winreg import *
+import pyaudio
+VALUES_COUNT = 2
+IP = '127.0.0.1'  # IP ADDRESS
+SEND_VIDEO_PORT = 1114
+RECEIVE_VIDEO_PORT = 1113
+SEND_AUDIO_PORT = 1111
+RECEIVE_AUDIO_PORT = 1112
+TEN_LISTENERS = 10  # AMOUNT OF LISTENERS
+FOUR_BYTES = 4  # for self.my_socket.recv
+PARTS = 1024
+HEADER_LENGTH = 4
+BUF = 512
+WIDTH = 640
+HEIGHT = 480
+RANGE_START = 0
+CAPTURE = 0
+TIME_SLEEP = 0.1
+WID = 3
+HIGH = 4
+WAIT_KEY = 1
+END = 0
+MAX_CHUNK_SIZE = 10  # for zfill - len of messages
+FORMAT = pyaudio.paInt16  # audio format
+CHANNELS = 1  # num of channels for audio
+RATE = 44100  # audio send rate
+chunk = CHUNK = 1024  # audio chunk size
+EXIT = -1
+
+
+class Client(object):
+    """
+    class client Todo: write more
+    """
+    def __init__(self, call_name, my_name):
+        """
+        todo: comment
+        """
+        self.receive_video_socket = None
+        self.send_video_socket = None
+        self.receive_audio_socket = None
+        self.send_audio_socket = None
+        self.my_name = my_name  # "noa"
+        self.call_name = call_name  # "amir"
+        self.lock = threading.Lock()
+
+        self.voice_device = pyaudio.PyAudio()
+
+        self.voice_stream = self.voice_device.open(format=FORMAT, channels=CHANNELS, rate=RATE,
+                                                   frames_per_buffer=chunk, input=True, output=True)
+        self.initiate_threads()
+
+    def registry_values(self):
+        """
+        gets server ip and port from registry
+        """
+        ip = ""
+        port = 0
+        raw_key = OpenKey(HKEY_LOCAL_MACHINE,
+                          r"Computer\HKEY_LOCAL_MACHINE"
+                          r"\SOFTWARE\WOW6432Node\client_backup")
+        for i in range(VALUES_COUNT):
+            try:
+                name, value, type = EnumValue(raw_key, i)
+                if name == "IPsame":
+                    ip = value
+                if name == "port":
+                    port = value
+                print(i, name, value, type)
+            except EnvironmentError:
+                print("You have ", i, " values")
+                break
+        CloseKey(raw_key)
+        return ip, port
+
+    def initiate_threads(self):
+        """
+        sends call to server
+        starts thread that sends video
+        """
+        receive_audio_thread = threading.Thread(target=self.receive_audio)
+        receive_audio_thread.start()
+        send_audio_thread = threading.Thread(target=self.send_audio)
+        send_audio_thread.start()
+        receive_video_thread = threading.Thread(target=self.receive_video)
+        receive_video_thread.start()
+        send_video_thread = threading.Thread(target=self.send_video)
+        send_video_thread.start()
+
+    def send_video(self):
+        """
+        sends video to server
+        """
+        self.send_video_socket = self.start_socket(IP, SEND_VIDEO_PORT)
+        self.send_chunk(self.call_name.encode(), self.send_video_socket)
+        mes = self.receive_mes(self.send_video_socket)
+        print(mes)
+        mes = self.receive_mes(self.send_video_socket)
+        print(mes)
+        while mes == "wait":
+            time.sleep(TIME_SLEEP)
+            mes = self.receive_mes(self.send_video_socket)
+            print(mes)
+        # print("here send")
+        cap = cv.VideoCapture(CAPTURE)
+        cap.set(WID, WIDTH)
+        cap.set(HIGH, HEIGHT)
+        code = 'start'
+        code = ('start' + (BUF - len(code)) * 'a').encode('utf-8')
+        try:
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if ret:
+                    self.send_chunk(code, self.send_video_socket)
+                    data = frame.tobytes()
+                    for i in range(RANGE_START, len(data), BUF):
+                        self.send_chunk(data[i:i + BUF],
+                                        self.send_video_socket)
+                    time.sleep(TIME_SLEEP)
+                else:
+                    break
+        except ConnectionAbortedError as e:
+            print("exception send video")
+            self.send_video_socket.close()
+
+    @staticmethod
+    def send_chunk(chnk, sock):
+        """
+        gets chunk and sends to server
+        """
+        length = len(chnk)
+        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + chnk
+        sock.send(data)
+
+    def receive_chunk(self):
+        """
+        gets chunk from server
+        """
+        raw_chunk_size = b''
+        raw_chunk_size_to_get = MAX_CHUNK_SIZE
+        while len(raw_chunk_size) < raw_chunk_size_to_get:
+            raw_chunk_size += self.receive_video_socket.recv(
+                raw_chunk_size_to_get - len(raw_chunk_size))
+        try:
+            chunk_size = int(raw_chunk_size.decode())
+        except Exception as e:
+            print('raw chunk size is {} its length is {}'
+                  .format(raw_chunk_size, len(raw_chunk_size)))
+            print("exception receive chunk 1: {}".format(e))
+        left = chunk_size
+        chunk = b''
+        try:
+            while left > END:
+                chunk += self.receive_video_socket.recv(left)
+                left = left - len(chunk)
+            return chunk
+        except Exception as e:
+            print("exception receive chunk 1: {}".format(e))
+            self.receive_video_socket.close()
+
+    def receive_video(self):
+        """
+        receives and shows video from server
+        """
+        self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
+        self.send_chunk(self.my_name.encode(), self.receive_video_socket)
+        print(self.receive_mes(self.receive_video_socket))
+        try:
+            code = b'start'
+            num_of_chunks = WIDTH * HEIGHT * WID / BUF
+            while True:
+                chunks = []
+                start = False
+                while len(chunks) < num_of_chunks:
+                    chunk = self.receive_chunk()
+                    if start:
+                        chunks.append(chunk)
+                    elif chunk.startswith(code):
+                        start = True
+
+                byte_frame = b''.join(chunks)
+                frame = np.frombuffer(
+                    byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
+
+                cv.imshow('recv', frame)
+                if cv.waitKey(WAIT_KEY) & 0xFF == ord('q'):
+                    break
+
+            self.receive_video_socket.close()
+            cv.destroyAllWindows()
+
+        except Exception as e:
+            self.receive_video_socket.close()
+            cv.destroyAllWindows()
+            print("Error receive_video:", e)
+            sys.exit(EXIT)
+
+    @staticmethod
+    def receive_mes(sock):
+        """
+        receives and returns message from client
+        """
+        try:
+            raw_data = sock.recv(MAX_CHUNK_SIZE)
+            data = raw_data.decode()
+            mes = "invalid message"
+            if data.isdigit():
+                mes = sock.recv(int(data)).decode()
+                mes = str(mes)
+            return mes
+        except Exception as e:
+            sock.close()
+            print("Error receive_mes: ", e)
+
+    @staticmethod
+    def start_socket(ip, port):
+        """
+        starts and returns socket
+        """
+        try:
+            # initiate socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # connect to server
+            print("ip =", ip)
+            print("port =", port)
+            sock.connect((ip, port))
+            return sock
+        except Exception as e:
+            print("Error start_socket", e)
+            #exit()
+
+    def receive_audio(self):
+        """
+        receives and plays audio
+        """
+        print("got to receive audio")
+        self.receive_audio_socket = self.start_socket(IP, RECEIVE_AUDIO_PORT)
+        self.send_chunk(self.my_name.encode(), self.receive_audio_socket)
+        print(self.receive_mes(self.receive_audio_socket))
+
+        print("receive stream made")
+        i = 0
+        done = False
+        try:
+            while not done:
+                i += 1
+                data = self.receive_audio_socket.recv(CHUNK)  # gets audio chunk
+                print("got audio chunk number {} of length {}".format(i, len(data)))
+                self.lock.acquire()
+                self.voice_stream.write(data)  # plays
+                self.lock.release()
+                # if len(data) == 0:
+                  #   done = True
+                #print("wrote chunk #{}".format(i))
+        except KeyboardInterrupt:
+            print("exception receive audio")
+            pass
+        print('Shutting down')
+        self.close_all()
+        # stream_receive.close()
+        # p_receive.terminate()
+
+    def send_audio(self):
+        """
+        records and sends audio to server
+        """
+        print("got to send audio")
+        self.send_audio_socket = self.start_socket(IP, SEND_AUDIO_PORT)
+        self.send_chunk(self.call_name.encode(), self.send_audio_socket)
+        mes = self.receive_mes(self.send_audio_socket)
+        print(mes)
+        mes = self.receive_mes(self.send_audio_socket)
+        print(mes)
+        while mes == "wait":
+            time.sleep(TIME_SLEEP)
+            mes = self.receive_mes(self.send_audio_socket)
+            print(mes)
+        # p_send = pyaudio.PyAudio()  # Create an interface to PortAudio
+        print('Recording...')
+
+        # stream_send = p_send.open(format=FORMAT, channels=CHANNELS, rate=RATE, frames_per_buffer=chunk, input=True,
+        #                          output=False)
+        print("send stream opened")
+        try:
+            # Store data in chunks for 3 seconds
+            done = False
+            num = 1
+            while not done:
+                self.lock.acquire()
+                data = self.voice_stream.read(chunk)   # records chunk
+                self.lock.release()
+                print("chunk {} recorded".format(num))
+                self.send_audio_socket.send(data)  # sends chunk
+                print("chunk {} sent".format(num))
+                num += 1
+            print('Finished recording')
+        except Exception as e:
+            print("sending audio error: {}".format(e))
+        self.close_all()
+        self.voice_stream.close()
+        self.voice_device.terminate()
+
+    def close_all(self):
+        """
+        closes all sockets and connections
+        """
+        self.receive_video_socket.close()
+        self.send_video_socket.close()
+        self.receive_audio_socket.close()
+        self.send_audio_socket.close()
+
+
+def main(call_name, my_name):
+    """
+    check my methods
+    """
+    client = Client(call_name, my_name)
+    while True:
+        time.sleep(TIME_SLEEP)
+
+
+if __name__ == '__main__':
+    main("amir", "noa")
+--------------------------------------------------------------------------------------------------------------------------client backup
+import threading
+import sys
+import socket
+import server_backup
+import time
+TIME_SLEEP = 0.5
+MAX_CHUNK_SIZE = 10  # for zfill - len of messages
+EXIT = -1
+LISTEN = 10
+IP = '0.0.0.0'
+LISTEN_PORT = 1000
+CALL_PORT = 1001
+USERS_PORT = 1002
+WAIT_KEY = 1
+
+
+class Server(object):
+    def __init__(self):
+        """ constructor"""
+        try:
+            self.call_socket = self.start_socket(IP, CALL_PORT)
+            self.listen_socket = self.start_socket(IP, LISTEN_PORT)
+            self.users_socket = self.start_socket(IP, USERS_PORT)
+            self.client_dict = {}
+        except socket.error as e:
+            print("socket creation fail: ", e)
+            self.call_socket.close()
+            self.listen_socket.close()
+        except Exception as e:
+            print("server construct fail: ", e)
+
+    @staticmethod
+    def start_socket(ip, port):
+        """
+        starts a socket with ip and port
+        """
+        sock = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
+        # the server binds itself to a certain socket
+        sock.bind((ip, port))
+        # listening to the socket
+        sock.listen(LISTEN)
+        return sock
+
+    @staticmethod
+    def receive_mes(client_socket):
+        """
+        receives and returns message from client
+        """
+        try:
+            raw_data = client_socket.recv(MAX_CHUNK_SIZE)
+            data = raw_data.decode()
+            mes = "invalid message"
+            if data.isdigit():
+                mes = client_socket.recv(int(data)).decode()
+                mes = str(mes)
+            return mes
+        except Exception as e:
+            client_socket.close()
+            print("Error in receive_mes: ", e)
+
+    @staticmethod
+    def send_mes(mes, sock):
+        """
+        gets chunk and sends to server
+        """
+        print("mes "+mes.decode())
+        length = len(mes)
+        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
+        sock.send(data)
+
+    def handle_clients(self):
+        """
+        when new client connects, adds to call options
+        starts make call thread, which either happens or not
+        """
+        done = False
+        while not done:
+            try:
+                listening_socket, address = self.listen_socket.accept()
+                print("connected listening socket: {}".format(listening_socket))
+                name = self.receive_mes(listening_socket)
+                # add to options:
+                self.client_dict[name] = listening_socket
+                # gets string of connected contacts
+                options = ','.join(self.client_dict.keys())
+                print(options)
+                # sends options to client:
+                self.send_mes(options.encode(), listening_socket)
+                users_thread = threading.Thread(target=self.users)
+                users_thread.start()
+                client_thread = threading.Thread(target=self.make_call)
+                client_thread.start()
+
+            except socket.error as msg:
+                print("socket failure: ", msg)
+                done = True
+            except Exception as msg:
+                print("exception: ", msg)
+                done = True
+
+    def users(self):
+        """
+        refreshes users constantly
+        """
+        users_socket, address = self.users_socket.accept()
+        while True:
+            # gets string of connected contacts
+            options = ','.join(self.client_dict.keys())
+            # sends options to client:
+            self.send_mes(options.encode(), users_socket)
+            time.sleep(TIME_SLEEP)
+
+    def make_call(self):
+        """
+        sends options to calling client
+        client chooses,
+        asks chosen client if wants to allow convo
+        if allows,
+        calls start call(which currently just prints yay)
+        """
+        call_socket, address = self.call_socket.accept()
+        print("connected call socket: {}".format(call_socket))
+        # gets name of user making the call:
+        caller_name = self.receive_mes(call_socket)
+        # gets from calling client user they want to call:
+        receiver_name = self.receive_mes(call_socket)
+        # gets receivers socket from dictionary
+        if receiver_name not in self.client_dict:
+            print("boi bye")
+            sys.exit(EXIT)
+        receiver_sock = self.client_dict[receiver_name]
+        mes = "{} is calling you".format(caller_name)
+        self.send_mes(mes.encode(), receiver_sock)
+        answer = self.receive_mes(receiver_sock)
+        print("answer from {}: {}".format(receiver_name, answer))
+        if answer == "Y":
+            self.send_mes("call".encode(), call_socket)
+            self.start_call()
+        else:
+            self.send_mes("no call".encode(), call_socket)
+
+    @staticmethod
+    def start_call():
+        server_backup.main()
+
+
+def main():
+    """
+    server main - receives a message returns it to client
+    """
+    try:
+        srvr = Server()
+        srvr.handle_clients()
+    except socket.error as msg:
+        print("socket failure: ", msg)
+    except Exception as msg:
+        print("exception: ", msg)
+
+
+if __name__ == '__main__':
+    main()
+-----------------------------------------------------------------------------------------------------------------------------server cal management
+import threading
+import sys
+import client_backup
+import socket
+import time
+TIME_SLEEP = 0.1
+TIME_SLEEP_USERS = 0.5
+MAX_CHUNK_SIZE = 10  # for zfill - len of messages
+EXIT = -1
+LISTEN = 10
+IP = '127.0.0.1'
+LISTEN_PORT = 1000
+CALL_PORT = 1001
+USERS_PORT = 1002
+WAIT_KEY = 1
+PERSON_CALLING = 0
+
+
+class Client(object):
+    """
+    class client Todo: write more
+    """
+
+    def __init__(self, name):
+        """
+        initiates
+        """
+        self.listen_socket = None
+        self.call_socket = None
+        self.users_socket = None
+        self.my_name = name
+        self.connected = []
+        self.being_called = False  # for loop checks if being called
+        self.answered_call = False  # for loop checks if call was answered
+        self.answered = False  # answer from other user
+        self.person_calling = ""
+        self.chosen_contact = ""
+        self.initiate()
+
+    @staticmethod
+    def start_socket(ip, port):
+        """
+        starts and returns socket
+        """
+        try:
+            # initiate socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # connect to server
+            sock.connect((ip, port))
+            print("connected with ip: {} and port: {}".format(ip, port))
+            return sock
+        except Exception as e:
+            print("Error start_socket", e)
+
+    @staticmethod
+    def receive_mes(sock):
+        """
+        receives and returns message from client
+        """
+        try:
+            raw_data = sock.recv(MAX_CHUNK_SIZE)
+            data = raw_data.decode()
+            mes = "invalid message"
+            if data.isdigit():
+                mes = sock.recv(int(data)).decode()
+                mes = str(mes)
+            return mes
+        except Exception as e:
+            sock.close()
+            print("Error in receive_mes: ", e)
+
+    @staticmethod
+    def send_mes(mes, sock):
+        """
+        gets chunk and sends to server
+        """
+        print("mes " + mes.decode())
+        length = len(mes)
+        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
+        sock.send(data)
+
+    def initiate(self):
+        """
+        initiates thread:
+        listening for call
+        """
+        listen_thread = threading.Thread(target=self.listener)
+        listen_thread.start()
+        users_thread = threading.Thread(target=self.users)
+        users_thread.start()
+
+    def initiate_calling(self, calling):
+        """
+        initiates thread:
+        calling
+        only initiated once btn pushed
+        """
+        self.chosen_contact = calling
+        call_thread = threading.Thread(target=self.caller)
+        call_thread.start()
+
+    def listener(self):
+        """
+        connects listening socket,
+        waits for call
+        """
+        # connects listening socket:
+        self.listen_socket = self.start_socket(IP, LISTEN_PORT)
+        # sends name for dictionary
+        self.send_mes(self.my_name.encode(), self.listen_socket)
+        # gets and sets calling options
+        calling_options = self.receive_mes(self.listen_socket)
+        print("options listener: {}".format(calling_options))
+        self.connected = calling_options.split(',')
+        self.get_call()
+
+    def users(self):
+        """
+        connects with users socket,
+        refreshes connected every two seconds
+        """
+        # connects users socket:
+        self.users_socket = self.start_socket(IP, USERS_PORT)
+        while True:
+            # gets and sets calling options
+            calling_options = self.receive_mes(self.users_socket)
+            #print("options listener: {}".format(calling_options))
+            self.connected = calling_options.split(',')
+            time.sleep(TIME_SLEEP_USERS)
+
+    def get_call(self):
+        """
+        gets call, answers or declines
+        """
+        # gets person calling
+        mes = self.receive_mes(self.listen_socket)
+        print("get call: {}".format(mes))
+        self.person_calling = str(mes).split()[PERSON_CALLING]
+        self.being_called = True
+        print("made being called True: {}".format(self.being_called))
+
+    def caller(self):
+        """
+        checks if wants to call if so, gets options and calls
+        """
+        # connects calling socket:
+        self.call_socket = self.start_socket(IP, CALL_PORT)
+        print("yay!!!!!!!!!!!!!")
+        # sends name
+        self.send_mes(self.my_name.encode(), self.call_socket)
+        self.send_mes(self.chosen_contact.encode(), self.call_socket)
+        answer = self.receive_mes(self.call_socket)
+        if answer.startswith("no"):
+            print("didn't answer")
+            self.answered = False
+            self.call_socket.close()
+        else:
+            self.answered = True
+            # self.start_call(self.chosen_contact)
+        self.answered_call = True
+
+    def start_call(self, calling):
+        """
+        starts call - if answered positive
+        """
+        print("yay!, starting call")
+        client_backup.main(calling, self.my_name)
+
+    def dont_answer(self):
+        """
+        if client doesnt want to answer call
+        """
+        print("got to dont answer")
+        self.send_mes("N".encode(), self.listen_socket)
+
+    def answer(self):
+        """
+        if client wants to answer
+        """
+        print("got to answer")
+        self.send_mes("Y".encode(), self.listen_socket)
+        self.start_call(self.person_calling)
+
+
+def main(name):
+    """
+    check my methods
+    """
+    client = Client(name)
+    while True:
+        time.sleep(TIME_SLEEP)
+
+
+if __name__ == '_main_':
+    main("Noa")
+-----------------------------------------------------------------------------------------------------------------------------client cal management
+import threading
+import sys
+import socket
+import numpy as np
+import cv2 as cv
+import time
+EXIT = -1
+LISTEN = 10
+IP = '0.0.0.0'
+PORT = 1111
+BUF = 512  # size of video chunk
+WIDTH = 640
+HEIGHT = 480
+RANGE_START = 0
+CAPTURE = 0
+TIME_SLEEP = 5
+WID = 3
+HIGH = 4
+WAIT_KEY = 1
+END = 0
+MAX_CHUNK_SIZE = 10  # for zfill - len of messages
+CHUNK = 1024
+
+
+class Server(object):
+    def __init__(self):
+        """ constructor"""
+        self.server_socket = None
+        try:
+            self.server_socket = self.start_socket(IP, PORT)
+            print('started socket at ip {} port {}'.format(IP, PORT))
+            self.client_socket, address = self.server_socket.accept()
+            print("connected client socket: {}".format(self.client_socket))
+            self.send_video()
+        except socket.error as e:
+            print("socket creation fail: ", e)
+            sys.exit(EXIT)
+        except Exception as e:
+            print("server construct fail: ", e)
+            sys.exit(EXIT)
+
+    @staticmethod
+    def start_socket(ip, port):
+        """
+        starts a socket with ip and port
+        """
+        sock = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM)
+        # the server binds itself to a certain socket
+        sock.bind((ip, port))
+        # listening to the socket
+        sock.listen(LISTEN)
+        print("started socket {}".format(sock))
+        return sock
+
+    @staticmethod
+    def send_chunk(chunk, send_socket):
+        """
+        gets chunk and sends to server
+        """
+        length = len(chunk)
+        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + chunk
+        send_socket.send(data)
+
+    def send_video(self):
+        """
+        sends video to client
+        """
+        # print("here send")
+        cap = cv.VideoCapture(CAPTURE)
+        cap.set(WID, WIDTH)
+        cap.set(HIGH, HEIGHT)
+        code = 'start'
+        code = ('start' + (BUF - len(code)) * 'a').encode('utf-8')
+        try:
+            while cap.isOpened():
+                ret, frame = cap.read()
+                if ret:
+                    self.send_chunk(code, self.client_socket)
+                    data = frame.tobytes()
+                    for i in range(RANGE_START, len(data), BUF):
+                        self.send_chunk(data[i:i + BUF],
+                                        self.client_socket)
+                    time.sleep(TIME_SLEEP)
+                else:
+                    break
+        except ConnectionAbortedError as e:
+            print("exception send video")
+            self.server_socket.close()
+
+
+def main():
+    """
+    todo: write more
+    """
+    try:
+        server_ = Server()
+    except socket.error as msg:
+        print("socket failure: ", msg)
+    except Exception as msg:
+        print("exception: ", msg)
+
+
+if __name__ == '__main__':
+    main()
+-----------------------------------------------------------------------------------------------------------------------------send_video_server
+import threading
+import sys
+import socket
+import numpy as np
+import cv2 as cv
+import time
+EXIT = -1
+LISTEN = 10
+IP = '172.29.225.78'
+PORT = 1111
+BUF = 512  # size of video chunk
+WIDTH = 640
+HEIGHT = 480
+RANGE_START = 0
+CAPTURE = 0
+TIME_SLEEP = 5
+WID = 3
+HIGH = 4
+WAIT_KEY = 1
+END = 0
+MAX_CHUNK_SIZE = 10  # for zfill - len of messages
+CHUNK = 1024
+
+
+class Client(object):
+    """
+    class client
+    """
+    def __init__(self):
+        self.my_socket = self.start_socket(IP, PORT)
+        self.receive_video()
+
+    @staticmethod
+    def start_socket(ip, port):
+        """
+        starts and returns socket
+        """
+        try:
+            # initiate socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # connect to server
+            sock.connect((ip, port))
+            print("started and connected socket: {}".format(sock))
+            return sock
+        except Exception as e:
+            print("Error start_socket", e)
+
+    def receive_video(self):
+        """
+        receives and shows video from server
+        """
+        try:
+            code = b'start'
+            num_of_chunks = WIDTH * HEIGHT * WID / BUF
+            while True:
+                chunks = []
+                start = False
+                while len(chunks) < num_of_chunks:
+                    chunk = self.receive_chunk()
+                    if start:
+                        chunks.append(chunk)
+                    elif chunk.startswith(code):
+                        start = True
+
+                byte_frame = b''.join(chunks)
+                frame = np.frombuffer(
+                    byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
+
+                cv.imshow('recv', frame)
+                if cv.waitKey(WAIT_KEY) & 0xFF == ord('q'):
+                    break
+
+            self.my_socket.close()
+            cv.destroyAllWindows()
+
+        except Exception as e:
+            self.my_socket.close()
+            cv.destroyAllWindows()
+            print("Error receive_video:", e)
+            sys.exit(EXIT)
+
+    def receive_chunk(self):
+        """
+        gets chunk from server
+        """
+        raw_chunk_size = b''
+        raw_chunk_size_to_get = MAX_CHUNK_SIZE
+        while len(raw_chunk_size) < raw_chunk_size_to_get:
+            raw_chunk_size += self.my_socket.recv(
+                raw_chunk_size_to_get - len(raw_chunk_size))
+        try:
+            chunk_size = int(raw_chunk_size.decode())
+        except Exception as e:
+            print('raw chunk size is {} its length is {}'
+                  .format(raw_chunk_size, len(raw_chunk_size)))
+            print("exception receive chunk 1: {}".format(e))
+        left = chunk_size
+        chunk = b''
+        try:
+            while left > END:
+                chunk += self.my_socket.recv(left)
+                left = left - len(chunk)
+            return chunk
+        except Exception as e:
+            print("exception receive chunk 1: {}".format(e))
+            self.my_socket.close()
+
+
+def main():
+    """
+    check my methods
+    """
+    client = Client()
+    while True:
+        time.sleep(TIME_SLEEP)
+
+
+if __name__ == '__main__':
+    main()
+--------------------------------------------------------------------------------------------------------------------------rec video client not the accurate one
+import wx
+import win32ui
+import win32con
+from client_call_management import *
+#from simple_window_2 import *
+WIDTH = 300
+LENGTH = 250
+START = 0
+BORDER = 5
+
+
+class GuiAll(wx.Frame):
+    """
+    """
+    def __init__(self, e, title):
+        super().__init__(e, title=title)
+        self.SetSize((WIDTH, LENGTH))
+        #self.Centre()
+        self.lock = threading.Lock()
+        # The combo box (drop down menu)
+        self.combo_box = None
+        # The client object
+        self.client = None
+
+        # panel:
+        self.pnl = wx.Panel(self)  # creates
+        self.pnl.SetBackgroundColour(wx.Colour('SLATE BLUE'))
+        self.sb = wx.StaticBox(self.pnl)  # sequence of items
+        self.sbs = wx.BoxSizer(wx.VERTICAL)  # boarder
+
+        # menu:
+        self.make_menu()
+
+    def make_menu(self):
+        """
+        makes menu with quit
+        """
+        menu_bar = wx.MenuBar()  # creates a MenuBar
+        file_menu = wx.Menu()  # adds menu
+        menu_item = file_menu.Append(wx.ID_EXIT, 'Quit', 'Quit application')
+        menu_bar.Append(file_menu, 'Menu&')  # adds item to menu
+        self.SetMenuBar(menu_bar)  # sets menu bar
+        self.Bind(wx.EVT_MENU, self.on_quit, menu_item)  # binds quit function
+
+    def on_quit(self, e):
+        """
+        when the user presses the quit button,
+        the function is called, ending the GUI loop
+        """
+        self.Close()
+
+    def start_client(self, username):
+        """
+        starts client when signs in
+        """
+        self.client = Client(username)
+
+    def start(self):
+        """
+        sets sizer and shows
+        """
+        self.SetSizer(self.sbs)
+        self.Centre()
+        self.Show(True)
+
+    def close(self):
+        self.Close(True)
+
+
+class GuiSignIn(GuiAll):
+    """
+    initiates ui
+    """
+    def __init__(self):
+        super().__init__(None, "Sign In")
+        self.param_user = wx.TextCtrl(self.pnl)  # username panel
+        self.init_ui()
+
+    def init_ui(self):
+        # username:
+        username_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        text_user = wx.StaticText(self.pnl, label='Username')  # username text
+        username_sizer.Add(window=text_user, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        username_sizer.Add(window=self.param_user, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+
+        # sign in button:
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sign_in_btn = wx.Button(self.pnl, label='Sign In')
+        sign_in_btn.Bind(wx.EVT_BUTTON, self.on_signed_in)
+        btn_sizer.Add(window=sign_in_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+
+        # size:
+        self.sbs.Add(username_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+
+        self.start()
+
+    def on_signed_in(self, e):
+        """
+        when the user presses the send button,
+        this function is called, which in turn
+        generates the query by combining all parameters
+        given by the user, and displays the text inside a message box.
+        """
+        username = self.param_user.GetValue()
+        GuiCallOrWait(username)
+        self.Close(True)
+
+
+class GuiCallOrWait(GuiAll):
+
+    def __init__(self, username):
+        super().__init__(None, "Call Window")
+        self.username = username
+        self.start_client(username)
+        self.options = self.client.connected
+        self.init_ui()
+
+    def init_ui(self):
+        """
+        call window
+        options for calling or waiting for a call
+        """
+        # buttons
+        call_btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        # call button
+        call_btn = wx.Button(self.pnl, label="make call")
+        call_btn.Bind(wx.EVT_BUTTON, self.on_call)
+        # wait for call button
+        #wait_btn = wx.Button(self.pnl, label="wait for call")
+        #wait_btn.Bind(wx.EVT_BUTTON, self.on_wait)
+        # size
+        call_btn_sizer.Add(window=call_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        #call_btn_sizer.Add(window=wait_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(call_btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        wait_for_call_thread = threading.Thread(target=self.on_wait)
+        wait_for_call_thread.start()
+        self.start()
+
+    def on_call(self, e):
+        #self.client.initiate_calling()
+        #self.options = self.client.connected
+        print("call or wait options: {}".format(self.options))
+        GuiCallOptions(self.client, self.username)
+        self.Close(True)
+
+    def on_wait(self):
+        """
+        waits for someone to call
+        """
+        print("waiting")
+        while not self.client.being_called:
+            time.sleep(TIME_SLEEP)
+            #print("waiting for call")
+        #self.close()
+        self.Close(True)
+        self.getting_called()
+
+    def getting_called(self):
+        """
+        when gets a call
+        """
+        person_calling = self.client.person_calling
+        if win32ui.MessageBox("{} is calling you. Do you want to answer?".format(self.client.person_calling),
+                              "Bringgggg", win32con.MB_YESNOCANCEL) == win32con.IDYES:
+            self.on_answer()
+        else:
+            self.on_dont_answer()
+
+    def on_answer(self):
+        """
+        when answer clicked
+        """
+        #self.Close(True)
+        self.client.answer()
+
+    def on_dont_answer(self):
+        """
+        when dont answer clicked
+        """
+        #self.Close(True)
+        self.client.dont_answer()
+        #GuiCallOrWait(self.username)
+
+
+class GuiCallOptions(GuiAll):
+
+    def __init__(self, client, username):
+        super().__init__(None, "Options Window")
+        #self.text = wx.TextCtrl(self.pnl, style=wx.TE_MULTILINE)
+        self.username = username
+        self.client = client
+        options = self.client.connected
+        if self.username in options:
+            options.remove(self.username)
+        print("call options, options: {}".format(options))
+        self.options_lstbox = wx.ListBox(self.pnl, choices=options, style=wx.LB_SINGLE, name="contacts")
+        self.init_ui()
+
+    def init_ui(self):
+        # call options
+        options_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        call_btn = wx.Button(self.pnl, label='Call')
+        call_btn.Bind(wx.EVT_BUTTON, self.on_call)
+        options_sizer.Add(window=self.options_lstbox, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        options_sizer.Add(window=call_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(options_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.start()
+
+    def on_call(self, e):
+        """
+        when one option clicked
+        """
+        calling = self.options_lstbox.GetString(self.options_lstbox.GetSelection())
+        print(calling)
+        self.client.initiate_calling(calling)
+        self.Close(True)
+        GuiWait(self.username, self.client)
+
+
+class GuiWait(GuiAll):
+    """
+    window in which waits for answer
+    """
+    def __init__(self, username, client):
+        super().__init__(None, "Wait Window")
+        self.username = username
+        self.client = client
+        self.init_ui()
+
+    def init_ui(self):
+        text_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        wait_text = wx.StaticText(self.pnl, label='Waiting For Answer....')
+        text_sizer.Add(window=wait_text, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(text_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        wait_for_answer_thread = threading.Thread(target=self.on_wait_for_answer)
+        wait_for_answer_thread.start()
+        self.start()
+
+    def on_wait_for_answer(self):
+        """
+        waits for someone to call
+        """
+        print("waiting")
+        while not self.client.answered_call:
+            time.sleep(TIME_SLEEP)
+            print("waiting for call")
+        #self.close()
+        self.Close(True)
+        if self.client.answered:  # if answered, starts call
+            self.client.start_call(self.client.chosen_contact)
+        else:
+            self.didnt_answer_window()
+
+    def didnt_answer_window(self):
+        """
+        if user didnt answer, gives 2 options
+        back to main window or disconnect
+        """
+        if win32ui.MessageBox("user didnt answer :( go back to main window?", "didnt answer!!",
+                              win32con.MB_YESNOCANCEL) == win32con.IDYES:
+
+            GuiCallOrWait(self.username)
+        else:
+            self.client.close()
+            self.Close(True)
+
+
+class GuiGettingCalled(GuiAll):
+    """
+    window which opens when getting called
+    """
+    def __init__(self, client):
+        super().__init__(None, "BRINGGGGG")
+        print("here at gui getting called")
+        self.client = client
+        # person calling this user
+        self.person_calling = self.client.person_calling
+        print("{} is calling".format(self.person_calling))
+        # text:
+        text_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        label = str(self.person_calling) + " is calling"
+        wait_text = wx.StaticText(self.pnl, label=label)
+        text_sizer.Add(window=wait_text, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        # buttons:
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        # call button
+        answer_btn = wx.Button(self.pnl, label="answer")
+        answer_btn.Bind(wx.EVT_BUTTON, self.on_answer)
+        # wait for call button
+        dont_answer_btn = wx.Button(self.pnl, label="dont")
+        dont_answer_btn.Bind(wx.EVT_BUTTON, self.on_dont_answer)
+        btn_sizer.Add(window=answer_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        btn_sizer.Add(window=dont_answer_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        # sizers:
+        self.sbs.Add(text_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        print("starting window you want:")
+        self.start()
+        print("started")
+
+    def on_answer(self, e):
+        """
+        when answer clicked
+        """
+        self.Close(True)
+        self.client.answer()
+
+    def on_dont_answer(self, e):
+        """
+        when dont answer clicked
+        """
+        self.Close(True)
+        self.client.dont_answer()
+
+
+def main():
+    """
+    begins an app loop,
+    creates a GUI.
+    when user quits, ends loop.
+    """
+    ex = []
+    ex = wx.App(None)
+    # ex = wx.App()
+    GuiSignIn()
+    ex.MainLoop()
+    # del ex
+
+
+if __name__ == '__main__':
+    main()
+------------------------------------------------------------------------------------------------------------------------------gui sign in
