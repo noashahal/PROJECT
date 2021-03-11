@@ -326,4 +326,4 @@ def main(call_name, my_name):
 
 
 if __name__ == '__main__':
-    main("amir", "noa")
+    main("noa", "amir")

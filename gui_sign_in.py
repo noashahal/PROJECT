@@ -23,8 +23,12 @@ class GuiAll(wx.Frame):
         self.client = None
 
         # panel:
+<<<<<<< HEAD
         self.pnl = wx.Panel(self)  # creates
         self.pnl.SetBackgroundColour(wx.Colour('SLATE BLUE'))
+=======
+        self.pnl = wx.Panel(self)  # creates panel
+>>>>>>> origin/master
         self.sb = wx.StaticBox(self.pnl)  # sequence of items
         self.sbs = wx.BoxSizer(wx.VERTICAL)  # boarder
 
@@ -113,7 +117,11 @@ class GuiCallOrWait(GuiAll):
         super().__init__(None, "Call Window")
         self.username = username
         self.start_client(username)
+<<<<<<< HEAD
         self.options = self.client.connected
+=======
+        #self.options = self.client.connected
+>>>>>>> origin/master
         self.init_ui()
 
     def init_ui(self):
@@ -140,7 +148,11 @@ class GuiCallOrWait(GuiAll):
     def on_call(self, e):
         #self.client.initiate_calling()
         #self.options = self.client.connected
+<<<<<<< HEAD
         print("call or wait options: {}".format(self.options))
+=======
+        #print("call or wait options: {}".format(self.options))
+>>>>>>> origin/master
         GuiCallOptions(self.client, self.username)
         self.Close(True)
 
@@ -190,11 +202,19 @@ class GuiCallOptions(GuiAll):
         #self.text = wx.TextCtrl(self.pnl, style=wx.TE_MULTILINE)
         self.username = username
         self.client = client
+<<<<<<< HEAD
         options = self.client.connected
         if self.username in options:
             options.remove(self.username)
         print("call options, options: {}".format(options))
         self.options_lstbox = wx.ListBox(self.pnl, choices=options, style=wx.LB_SINGLE, name="contacts")
+=======
+        self.options = self.client.connected
+        if self.username in self.options:
+            self.options.remove(self.username)
+        print("call options, options: {}".format(self.options))
+        self.options_lstbox = wx.ListBox(self.pnl, choices=self.options, style=wx.LB_SINGLE, name="contacts")
+>>>>>>> origin/master
         self.init_ui()
 
     def init_ui(self):
@@ -329,4 +349,8 @@ def main():
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     main()
+=======
+    main()
+>>>>>>> origin/master
