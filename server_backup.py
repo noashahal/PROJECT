@@ -1,10 +1,11 @@
 import threading
 import sys
 import socket
-import numpy as np
-import cv2 as cv
+#import numpy as np
+#import cv2 as cv
 import time
-import pyaudio
+#import pyaudio
+#from constants import *
 EXIT = -1
 LISTEN = 10
 IP = '0.0.0.0'

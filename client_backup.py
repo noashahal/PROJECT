@@ -5,10 +5,9 @@ import numpy as np
 import cv2 as cv
 import time
 from winreg import *
-#from constants import *
 import pyaudio
 VALUES_COUNT = 2
-IP = "127.0.0.1"  # IP ADDRESS
+IP = '127.0.0.1'  # IP ADDRESS
 SEND_VIDEO_PORT = 1114
 RECEIVE_VIDEO_PORT = 1113
 SEND_AUDIO_PORT = 1111
@@ -43,7 +42,6 @@ class Client(object):
         """
         todo: comment
         """
-        # ip, port = self.registry_values()
         self.receive_video_socket = None
         self.send_video_socket = None
         self.receive_audio_socket = None
