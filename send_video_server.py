@@ -81,7 +81,7 @@ class Server(object):
                     for i in range(RANGE_START, len(data), BUF):
                         self.send_chunk(data[i:i + BUF],
                                         self.client_socket)
-                    time.sleep(TIME_SLEEP)
+                    #time.sleep(TIME_SLEEP)
                 else:
                     break
         except ConnectionAbortedError as e:

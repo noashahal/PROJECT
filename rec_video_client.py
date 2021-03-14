@@ -4,9 +4,11 @@ import socket
 import numpy as np
 import cv2 as cv
 import time
+from final_peula import *
+from wx.lib import statbmp
 EXIT = -1
 LISTEN = 10
-IP = '172.29.225.78'
+IP = '127.0.0.1'
 PORT = 1111
 BUF = 512  # size of video chunk
 WIDTH = 640
@@ -28,6 +30,7 @@ class Client(object):
     """
     def __init__(self):
         self.my_socket = self.start_socket(IP, PORT)
+        self.frame = {"frame": None}
         self.receive_video()
 
     @staticmethod
@@ -49,35 +52,49 @@ class Client(object):
         """
         receives and shows video from server
         """
-        try:
-            code = b'start'
-            num_of_chunks = WIDTH * HEIGHT * WID / BUF
-            while True:
-                chunks = []
-                start = False
-                while len(chunks) < num_of_chunks:
-                    chunk = self.receive_chunk()
-                    if start:
-                        chunks.append(chunk)
-                    elif chunk.startswith(code):
-                        start = True
+        code = b'start'
+        num_of_chunks = WIDTH * HEIGHT * WID / BUF
+        first = True
+        num = 1
+        while True:
+            chunks = []
+            start = False
+            while len(chunks) < num_of_chunks:
+                chunk = self.receive_chunk()
+                if start:
+                    chunks.append(chunk)
+                elif chunk.startswith(code):
+                    start = True
 
-                byte_frame = b''.join(chunks)
-                frame = np.frombuffer(
-                    byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
+            byte_frame = b''.join(chunks)
 
-                cv.imshow('recv', frame)
-                if cv.waitKey(WAIT_KEY) & 0xFF == ord('q'):
-                    break
+            prev = self.frame["frame"]
 
-            self.my_socket.close()
-            cv.destroyAllWindows()
+            self.frame["frame"] = np.frombuffer(
+                byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
 
-        except Exception as e:
-            self.my_socket.close()
-            cv.destroyAllWindows()
-            print("Error receive_video:", e)
-            sys.exit(EXIT)
+            if prev is not self.frame["frame"]:
+                num+=1
+                print("got new frame: {}".format(num))
+
+            #cv.imshow('window', frame)
+            if first:
+                show_thread = threading.Thread(target=self.call_show)
+                show_thread.start()
+                first = False
+
+            if cv.waitKey(WAIT_KEY) & 0xFF == ord('q'):
+                break
+
+        self.my_socket.close()
+        cv.destroyAllWindows()
+
+    def call_show(self):
+        """
+        calls show in final peula
+        """
+        print("started showing thread")
+        show(self)
 
     def receive_chunk(self):
         """
