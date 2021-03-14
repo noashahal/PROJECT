@@ -113,6 +113,7 @@ class GuiCallOrWait(GuiAll):
         self.username = username
         self.start_client(username)
         self.options = self.client.connected
+        self.timer = wx.Timer(self)
         #self.options = self.client.connected
         self.init_ui()
 
@@ -136,9 +137,9 @@ class GuiCallOrWait(GuiAll):
         #wait_for_call_thread = threading.Thread(target=self.on_wait)
         #wait_for_call_thread.start()
 
-        timer = wx.Timer(self)
-        timer.Start(1)
         self.Bind(wx.EVT_TIMER, self.on_wait)
+        self.timer.Start(1000)
+
         print("GOT HERE")
         self.start()
 
@@ -154,12 +155,9 @@ class GuiCallOrWait(GuiAll):
         waits for someone to call
         """
         print("waiting")
-        while not self.client.being_called:
-            time.sleep(TIME_SLEEP)
-            #print("waiting for call")
-        #self.close()
-        self.Close(True)
-        self.getting_called()
+        if self.client.being_called:
+            self.Close(True)
+            self.getting_called()
 
     def getting_called(self):
         """
@@ -231,6 +229,7 @@ class GuiWait(GuiAll):
         super().__init__(None, "Wait Window")
         self.username = username
         self.client = client
+        self.timer = wx.Timer(self)
         self.init_ui()
 
     def init_ui(self):
@@ -240,9 +239,9 @@ class GuiWait(GuiAll):
         self.sbs.Add(text_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         # wait_for_answer_thread = threading.Thread(target=self.on_wait_for_answer)
         # wait_for_answer_thread.start()
-        timer = wx.Timer(self)
-        timer.Start(1)
+
         self.Bind(wx.EVT_TIMER, self.on_wait_for_answer)
+        self.timer.Start(1000)
         self.start()
 
     def on_wait_for_answer(self, e):
@@ -250,16 +249,14 @@ class GuiWait(GuiAll):
         waits for someone to call
         """
         print("waiting")
-        while not self.client.answered_call:
-            time.sleep(TIME_SLEEP)
+        if not self.client.answered_call:
             print("waiting for answer")
-        #self.close()
-        self.Close(True)
-        if self.client.answered:  # if answered, starts call
-            self.answered_true = True
-            self.client.start_call(self.client.chosen_contact)
         else:
-            self.didnt_answer_window()
+            self.Close(True)
+            if self.client.answered:  # if answered, starts call
+                self.client.start_call(self.client.chosen_contact)
+            else:
+                self.didnt_answer_window()
 
     def didnt_answer_window(self):
         """
