@@ -49,7 +49,7 @@ class GuiAll(wx.Frame):
         self.Close()
 
     def start_client(self, username):
-        """
+        """q
         starts client when signs in
         """
         self.client = Client(username)
@@ -244,7 +244,7 @@ class GuiWait(GuiAll):
         print("waiting")
         while not self.client.answered_call:
             time.sleep(TIME_SLEEP)
-            print("waiting for call")
+            print("waiting for answer")
         #self.close()
         self.Close(True)
         if self.client.answered:  # if answered, starts call

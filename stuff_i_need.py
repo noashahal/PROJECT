@@ -10,7 +10,6 @@ class ShowCapture(wx.Frame):
     def __init__(self, capture, fps=15):
         wx.Frame.__init__(self, None)
         panel = wx.Panel(self, -1)
-
         #create a grid sizer with 5 pix between each cell
         sizer = wx.GridBagSizer(5, 5)
         self.capture = capture
@@ -51,8 +50,10 @@ class ShowCapture(wx.Frame):
         ret, self.orig_frame = self.capture.read()
         if ret:
             frame = cv2.cvtColor(self.orig_frame, cv2.COLOR_BGR2RGB)
+            print("frame::::::::::::::", frame)
             self.bmp.CopyFromBuffer(frame)
             self.ImgControl.SetBitmap(self.bmp)
+
 
 
 capture = cv2.VideoCapture(0)  # video capture

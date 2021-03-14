@@ -74,8 +74,8 @@ class Client(object):
                 byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
 
             if prev is not self.frame["frame"]:
-                num+=1
                 print("got new frame: {}".format(num))
+                num += 1
 
             #cv.imshow('window', frame)
             if first:
@@ -94,7 +94,7 @@ class Client(object):
         calls show in final peula
         """
         print("started showing thread")
-        show(self)
+        show_video(self)
 
     def receive_chunk(self):
         """

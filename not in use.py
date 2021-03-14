@@ -148,3 +148,39 @@ def handle_user_input(self):
             except Exception as msg:
                 print("exception!: ", msg)
                 break
+---------------------------------------------------------------------------------------------------
+
+            code = b'start'
+            num_of_chunks = WIDTH * HEIGHT * WID / BUF
+            first = True
+            num = 1
+            while True:
+                chunks = []
+                start = False
+                while len(chunks) < num_of_chunks:
+                    chunk = self.receive_chunk()
+                    if start:
+                        chunks.append(chunk)
+                    elif chunk.startswith(code):
+                        start = True
+
+                byte_frame = b''.join(chunks)
+                prev = self.frame["frame"]
+                self.frame["frame"] = np.frombuffer(
+                    byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
+
+                if prev is not self.frame["frame"]:
+                    print("got new frame: {}".format(num))
+                    num += 1
+
+                # cv.imshow('window', frame)
+                if first:
+                    show_thread = threading.Thread(target=self.call_show)
+                    show_thread.start()
+                    first = False
+
+                if cv.waitKey(WAIT_KEY) & 0xFF == ord('q'):
+                    break
+
+            self.receive_video_socket.close()
+            cv.destroyAllWindows()

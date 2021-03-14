@@ -5,6 +5,7 @@ import numpy as np
 import cv2 as cv
 import time
 from winreg import *
+from final_peula import *
 import pyaudio
 VALUES_COUNT = 2
 IP = '127.0.0.1'  # IP ADDRESS
@@ -32,6 +33,7 @@ CHANNELS = 1  # num of channels for audio
 RATE = 44100  # audio send rate
 chunk = CHUNK = 1024  # audio chunk size
 EXIT = -1
+ADD = 1  # for counter
 
 
 class Client(object):
@@ -49,35 +51,13 @@ class Client(object):
         self.my_name = my_name  # "noa"
         self.call_name = call_name  # "amir"
         self.lock = threading.Lock()
+        #self.frame = {"frame": None}
 
         self.voice_device = pyaudio.PyAudio()
 
         self.voice_stream = self.voice_device.open(format=FORMAT, channels=CHANNELS, rate=RATE,
                                                    frames_per_buffer=chunk, input=True, output=True)
         self.initiate_threads()
-
-    def registry_values(self):
-        """
-        gets server ip and port from registry
-        """
-        ip = ""
-        port = 0
-        raw_key = OpenKey(HKEY_LOCAL_MACHINE,
-                          r"Computer\HKEY_LOCAL_MACHINE"
-                          r"\SOFTWARE\WOW6432Node\client_backup")
-        for i in range(VALUES_COUNT):
-            try:
-                name, value, type = EnumValue(raw_key, i)
-                if name == "IPsame":
-                    ip = value
-                if name == "port":
-                    port = value
-                print(i, name, value, type)
-            except EnvironmentError:
-                print("You have ", i, " values")
-                break
-        CloseKey(raw_key)
-        return ip, port
 
     def initiate_threads(self):
         """
@@ -150,8 +130,8 @@ class Client(object):
         try:
             chunk_size = int(raw_chunk_size.decode())
         except Exception as e:
-            print('raw chunk size is {} its length is {}'
-                  .format(raw_chunk_size, len(raw_chunk_size)))
+            #print('raw chunk size is {} its length is {}'
+                  #.format(raw_chunk_size, len(raw_chunk_size)))
             print("exception receive chunk 1: {}".format(e))
         left = chunk_size
         chunk = b''
@@ -168,33 +148,12 @@ class Client(object):
         """
         receives and shows video from server
         """
+        print("receive video!!!!!!!!!!!!!!!")
         self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
         self.send_chunk(self.my_name.encode(), self.receive_video_socket)
         print(self.receive_mes(self.receive_video_socket))
         try:
-            code = b'start'
-            num_of_chunks = WIDTH * HEIGHT * WID / BUF
-            while True:
-                chunks = []
-                start = False
-                while len(chunks) < num_of_chunks:
-                    chunk = self.receive_chunk()
-                    if start:
-                        chunks.append(chunk)
-                    elif chunk.startswith(code):
-                        start = True
-
-                byte_frame = b''.join(chunks)
-                frame = np.frombuffer(
-                    byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
-
-                cv.imshow('recv', frame)
-                if cv.waitKey(WAIT_KEY) & 0xFF == ord('q'):
-                    break
-
-            self.receive_video_socket.close()
-            cv.destroyAllWindows()
-
+            show_video(self)
         except Exception as e:
             self.receive_video_socket.close()
             cv.destroyAllWindows()
@@ -227,8 +186,7 @@ class Client(object):
             # initiate socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # connect to server
-            print("ip =", ip)
-            print("port =", port)
+            print("started socket at ip {} and port {}".format(ip, port))
             sock.connect((ip, port))
             return sock
         except Exception as e:
@@ -246,23 +204,21 @@ class Client(object):
 
         print("receive stream made")
         i = 0
-        done = False
-        try:
-            while not done:
-                i += 1
-                data = self.receive_audio_socket.recv(CHUNK)  # gets audio chunk
-                print("got audio chunk number {} of length {}".format(i, len(data)))
-                self.lock.acquire()
-                self.voice_stream.write(data)  # plays
-                self.lock.release()
-                # if len(data) == 0:
-                  #   done = True
-                #print("wrote chunk #{}".format(i))
-        except KeyboardInterrupt:
-            print("exception receive audio")
-            pass
-        print('Shutting down')
+        while True:
+            i += 1
+            data = self.receive_audio_socket.recv(CHUNK)  # gets audio chunk
+            #print("got audio chunk number {} of length {}".format(i, len(data)))
+            self.lock.acquire()
+            self.voice_stream.write(data)  # plays
+            self.lock.release()
+            # if len(data) == 0:
+              #   done = True
+            #print("wrote chunk #{}".format(i))
+            if cv.waitKey(WAIT_KEY) & 0xFF == ord('q'):
+                break
+        print("exception receive audio")
         self.close_all()
+        cv.destroyAllWindows()
         # stream_receive.close()
         # p_receive.terminate()
 
@@ -290,15 +246,15 @@ class Client(object):
         try:
             # Store data in chunks for 3 seconds
             done = False
-            num = 1
+            num = RANGE_START
             while not done:
                 self.lock.acquire()
                 data = self.voice_stream.read(chunk)   # records chunk
                 self.lock.release()
-                print("chunk {} recorded".format(num))
+                #print("chunk {} recorded".format(num))
                 self.send_audio_socket.send(data)  # sends chunk
-                print("chunk {} sent".format(num))
-                num += 1
+                #print("chunk {} sent".format(num))
+                num += ADD
             print('Finished recording')
         except Exception as e:
             print("sending audio error: {}".format(e))

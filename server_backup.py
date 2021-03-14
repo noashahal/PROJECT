@@ -219,7 +219,7 @@ class Server(object):
             while True:
                 i += 1
                 data = receive_audio_socket.recv(CHUNK)
-                print("got audio chunk number {} of length {}".format(i, len(data)))
+                #print("got audio chunk number {} of length {}".format(i, len(data)))
                 if len(data) == 0:
                     break
                 send_audio_socket.send(data)

@@ -64,10 +64,13 @@ class Server(object):
         """
         gets chunk and sends to server
         """
-        print("mes "+mes.decode())
-        length = len(mes)
-        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
-        sock.send(data)
+        try:
+            print("mes "+mes.decode())
+            length = len(mes)
+            data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
+            sock.send(data)
+        except socket.error as e:
+            print("socket send_mes fail: ", e)
 
     def handle_clients(self):
         """
@@ -103,13 +106,18 @@ class Server(object):
         """
         refreshes users constantly
         """
+        done = False
         users_socket, address = self.users_socket.accept()
-        while True:
-            # gets string of connected contacts
-            options = ','.join(self.client_dict.keys())
-            # sends options to client:
-            self.send_mes(options.encode(), users_socket)
-            time.sleep(TIME_SLEEP)
+        while not done:
+            try:
+                # gets string of connected contacts
+                options = ','.join(self.client_dict.keys())
+                # sends options to client:
+                self.send_mes(options.encode(), users_socket)
+                time.sleep(TIME_SLEEP)
+            except socket.error as msg:
+                print("socket failure: ", msg)
+                done = True
 
     def make_call(self):
         """
