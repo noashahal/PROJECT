@@ -68,10 +68,11 @@ class Client(object):
         receive_audio_thread.start()
         send_audio_thread = threading.Thread(target=self.send_audio)
         send_audio_thread.start()
-        receive_video_thread = threading.Thread(target=self.receive_video)
-        receive_video_thread.start()
+        #receive_video_thread = threading.Thread(target=self.receive_video)
+        #receive_video_thread.start()
         send_video_thread = threading.Thread(target=self.send_video)
         send_video_thread.start()
+        self.receive_video()
 
     def send_video(self):
         """
@@ -152,8 +153,72 @@ class Client(object):
         self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
         self.send_chunk(self.my_name.encode(), self.receive_video_socket)
         print(self.receive_mes(self.receive_video_socket))
+        #try:
+        frame = self.get_frame()
+        show_video(self, frame)
+
+        # except Exception as e:
+        #     self.receive_video_socket.close()
+        #     cv.destroyAllWindows()
+        #     print("Error receive_video:", e)
+        #     sys.exit(EXIT)
+
+    def get_frame(self):
+        """
+        gets single frame
+        """
+        code = b'start'
+        num_of_chunks = WIDTH * HEIGHT * WID / BUF
+        chunks = []
+        start = False
+        while len(chunks) < num_of_chunks:
+            chunk = self.receive_chunk()
+            if start:
+                chunks.append(chunk)
+            elif chunk.startswith(code):
+                start = True
+
+        byte_frame = b''.join(chunks)
+        frame = np.frombuffer(
+            byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
+        return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    def receive_video_og(self):
+        """
+        receives and shows video from server
+        """
+        self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
+        self.send_chunk(self.my_name.encode(), self.receive_video_socket)
+        print(self.receive_mes(self.receive_video_socket))
         try:
-            show_video(self)
+            code = b'start'
+            num_of_chunks = WIDTH * HEIGHT * WID / BUF
+            done = False
+            while not done:
+                try:
+                    chunks = []
+                    start = False
+                    while len(chunks) < num_of_chunks:
+                        chunk = self.receive_chunk()
+                        if start:
+                            chunks.append(chunk)
+                        elif chunk.startswith(code):
+                            start = True
+
+                    byte_frame = b''.join(chunks)
+                    frame = np.frombuffer(
+                        byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
+
+                    cv.imshow('recv', frame)
+                    if cv.waitKey(WAIT_KEY) & 0xFF == ord('q'):
+                        done = True
+                except socket.error as msg:
+                    print("socket failure receive video: {}".format(msg))
+                    done = True
+
+            self.receive_video_socket.close()
+            cv.destroyAllWindows()
+
         except Exception as e:
             self.receive_video_socket.close()
             cv.destroyAllWindows()

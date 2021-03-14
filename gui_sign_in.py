@@ -133,8 +133,13 @@ class GuiCallOrWait(GuiAll):
         call_btn_sizer.Add(window=call_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         #call_btn_sizer.Add(window=wait_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         self.sbs.Add(call_btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        wait_for_call_thread = threading.Thread(target=self.on_wait)
-        wait_for_call_thread.start()
+        #wait_for_call_thread = threading.Thread(target=self.on_wait)
+        #wait_for_call_thread.start()
+
+        timer = wx.Timer(self)
+        timer.Start(1)
+        self.Bind(wx.EVT_TIMER, self.on_wait)
+        print("GOT HERE")
         self.start()
 
     def on_call(self, e):
@@ -144,7 +149,7 @@ class GuiCallOrWait(GuiAll):
         GuiCallOptions(self.client, self.username)
         self.Close(True)
 
-    def on_wait(self):
+    def on_wait(self, e):
         """
         waits for someone to call
         """
@@ -233,11 +238,14 @@ class GuiWait(GuiAll):
         wait_text = wx.StaticText(self.pnl, label='Waiting For Answer....')
         text_sizer.Add(window=wait_text, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
         self.sbs.Add(text_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        wait_for_answer_thread = threading.Thread(target=self.on_wait_for_answer)
-        wait_for_answer_thread.start()
+        # wait_for_answer_thread = threading.Thread(target=self.on_wait_for_answer)
+        # wait_for_answer_thread.start()
+        timer = wx.Timer(self)
+        timer.Start(1)
+        self.Bind(wx.EVT_TIMER, self.on_wait_for_answer)
         self.start()
 
-    def on_wait_for_answer(self):
+    def on_wait_for_answer(self, e):
         """
         waits for someone to call
         """
@@ -248,6 +256,7 @@ class GuiWait(GuiAll):
         #self.close()
         self.Close(True)
         if self.client.answered:  # if answered, starts call
+            self.answered_true = True
             self.client.start_call(self.client.chosen_contact)
         else:
             self.didnt_answer_window()
