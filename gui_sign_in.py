@@ -157,6 +157,8 @@ class GuiCallOrWait(GuiAll):
         print("waiting")
         if self.client.being_called:
             self.Close(True)
+            self.timer.Stop()
+            self.client.being_called = False  # for next call
             self.getting_called()
 
     def getting_called(self):
@@ -252,6 +254,9 @@ class GuiWait(GuiAll):
         if not self.client.answered_call:
             print("waiting for answer")
         else:
+            #print('this is the error :)')
+            self.client.answered_call = False  # for next call
+            self.timer.Stop()
             self.Close(True)
             if self.client.answered:  # if answered, starts call
                 self.client.start_call(self.client.chosen_contact)

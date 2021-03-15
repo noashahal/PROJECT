@@ -11,10 +11,11 @@ NUM_OF_CHUNKS = WIDTH * HEIGHT * WID / BUF
 PANEL = -1
 TIMER = 1000.
 
+
 class ShowCapture(wx.Frame):
     def __init__(self, client, frame, fps=15):
         wx.Frame.__init__(self, None)
-
+        print("got to show capture in final peula")
         panel = wx.Panel(self, PANEL)
         self.client = client
         self.frame = frame
@@ -59,6 +60,7 @@ class ShowCapture(wx.Frame):
 
 
 def show_video(client, frame):
+    print("got to show video in final peula")
     app = wx.App()
     frame2 = ShowCapture(client, frame)
     frame2.Show()
