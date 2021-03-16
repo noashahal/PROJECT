@@ -23,8 +23,8 @@ class ShowCapture(wx.Frame):
 
         self.bmp = wx.BitmapFromBuffer(width, height, frame)
 
-        self.dummy_element = wx.TextCtrl(panel, -1, '')
-        self.dummy_element.Hide()
+        #self.dummy_element = wx.TextCtrl(panel, -1, '')
+        #self.dummy_element.Hide()
 
         #create image display widgets
         self.ImgControl = statbmp.GenStaticBitmap(panel, wx.ID_ANY, self.bmp)
@@ -50,7 +50,6 @@ class ShowCapture(wx.Frame):
         ret, self.orig_frame = self.capture.read()
         if ret:
             frame = cv2.cvtColor(self.orig_frame, cv2.COLOR_BGR2RGB)
-            print("frame::::::::::::::", frame)
             self.bmp.CopyFromBuffer(frame)
             self.ImgControl.SetBitmap(self.bmp)
 

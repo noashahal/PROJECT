@@ -40,7 +40,7 @@ class Client(object):
     """
     class client Todo: write more
     """
-    def __init__(self, call_name, my_name):
+    def __init__(self, call_name, my_name, client_manage):
         """
         todo: comment
         """
@@ -51,6 +51,8 @@ class Client(object):
         self.my_name = my_name  # "noa"
         self.call_name = call_name  # "amir"
         self.lock = threading.Lock()
+        self.done = False
+        self.client_manage = client_manage
         #self.frame = {"frame": None}
 
         self.voice_device = pyaudio.PyAudio()
@@ -89,14 +91,13 @@ class Client(object):
             mes = self.receive_mes(self.send_video_socket)
             print(mes)
         # print("here send")
-        cap = cv.VideoCapture(CAPTURE)
+        cap = cv.VideoCapture(CAPTURE, cv2.CAP_DSHOW)
         cap.set(WID, WIDTH)
         cap.set(HIGH, HEIGHT)
         code = 'start'
         code = ('start' + (BUF - len(code)) * 'a').encode('utf-8')
-        done = False
         # try:
-        while cap.isOpened() and not done:
+        while cap.isOpened() and not self.done:
             try:
                 ret, frame = cap.read()
                 if ret:
@@ -110,7 +111,7 @@ class Client(object):
                     break
             except socket.error as msg:
                 print("socket failure send video: {}".format(msg))
-                done = True
+                self.done = True
         # except ConnectionAbortedError as e:
         # print("exception send video")
         self.send_video_socket.close()
@@ -150,6 +151,7 @@ class Client(object):
         except Exception as e:
             print("exception receive chunk 1: {}".format(e))
             self.receive_video_socket.close()
+            #sys.exit(EXIT)
 
     def receive_video(self):
         """
@@ -161,7 +163,7 @@ class Client(object):
         print(self.receive_mes(self.receive_video_socket))
         #try:
         frame = self.get_frame()
-        show_video(self, frame)
+        show_video(self, frame, self.my_name, self.call_name, self.client_manage)
 
         # except Exception as e:
         #     self.receive_video_socket.close()
@@ -189,48 +191,6 @@ class Client(object):
             byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
         return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    def receive_video_og(self):
-        """
-        receives and shows video from server
-        """
-        self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
-        self.send_chunk(self.my_name.encode(), self.receive_video_socket)
-        print(self.receive_mes(self.receive_video_socket))
-        try:
-            code = b'start'
-            num_of_chunks = WIDTH * HEIGHT * WID / BUF
-            done = False
-            while not done:
-                try:
-                    chunks = []
-                    start = False
-                    while len(chunks) < num_of_chunks:
-                        chunk = self.receive_chunk()
-                        if start:
-                            chunks.append(chunk)
-                        elif chunk.startswith(code):
-                            start = True
-
-                    byte_frame = b''.join(chunks)
-                    frame = np.frombuffer(
-                        byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
-
-                    cv.imshow('recv', frame)
-                    if cv.waitKey(WAIT_KEY) & 0xFF == ord('q'):
-                        done = True
-                except socket.error as msg:
-                    print("socket failure receive video: {}".format(msg))
-                    done = True
-
-            self.receive_video_socket.close()
-            cv.destroyAllWindows()
-
-        except Exception as e:
-            self.receive_video_socket.close()
-            cv.destroyAllWindows()
-            print("Error receive_video:", e)
-            sys.exit(EXIT)
-
     @staticmethod
     def receive_mes(sock):
         """
@@ -247,6 +207,7 @@ class Client(object):
         except Exception as e:
             sock.close()
             print("Error receive_mes: ", e)
+            #sys.exit(EXIT)
 
     @staticmethod
     def start_socket(ip, port):
@@ -275,8 +236,7 @@ class Client(object):
 
         print("receive stream made")
         i = 0
-        done = False
-        while not done:
+        while not self.done:
             try:
                 i += 1
                 data = self.receive_audio_socket.recv(CHUNK)  # gets audio chunk
@@ -289,10 +249,10 @@ class Client(object):
                 #print("wrote chunk #{}".format(i))
             except socket.error as msg:
                 print("socket failure receive audio: {}".format(msg))
-                done = True
+                self.done = True
             except KeyboardInterrupt:
                 print("exception receive audio")
-                done = True
+                self.done = True
         self.receive_audio_socket.close()
         # stream_receive.close()
         # p_receive.terminate()
@@ -318,10 +278,9 @@ class Client(object):
         # stream_send = p_send.open(format=FORMAT, channels=CHANNELS, rate=RATE, frames_per_buffer=chunk, input=True,
         #                          output=False)
         print("send stream opened")
-        # Store data in chunks for 3 seconds
-        done = False
+        # Store data in chunks for 3 secondsdone = False
         num = 1
-        while not done:
+        while not self.done:
             try:
                 self.lock.acquire()
                 data = self.voice_stream.read(chunk)  # records chunk
@@ -332,10 +291,10 @@ class Client(object):
                 num += 1
             except socket.error as msg:
                 print("socket failure send audio: {}".format(msg))
-                done = True
+                self.done = True
             except Exception as e:
                 print("sending audio error: {}".format(e))
-                done = True
+                self.done = True
         self.send_audio_socket.close()
         self.voice_stream.close()
         self.voice_device.terminate()
@@ -344,20 +303,18 @@ class Client(object):
         """
         closes all sockets and connections
         """
-        self.receive_video_socket.close()
-        self.send_video_socket.close()
-        self.receive_audio_socket.close()
-        self.send_audio_socket.close()
+        cv2.destroyAllWindows()
+        self.done = True
+        #sys.exit(EXIT)
 
 
-def main(call_name, my_name):
+def main(call_name, my_name, client_manage):
     """
     check my methods
     """
-    client = Client(call_name, my_name)
+    client = Client(call_name, my_name, client_manage)
     while True:
         time.sleep(TIME_SLEEP)
 
 
-if __name__ == '__main__':
-    main("noa", "amir")
+

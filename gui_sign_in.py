@@ -1,4 +1,5 @@
 import wx
+import random
 import win32ui
 import win32con
 from client_call_management import *
@@ -6,7 +7,11 @@ from client_call_management import *
 WIDTH = 300
 LENGTH = 250
 START = 0
+COLOR_END = 19
 BORDER = 5
+COLORS = ['SLATE BLUE', 'AQUAMARINE', 'RED', 'FOREST GREEN', 'SALMON', 'MEDIUM ORCHID', 'SEA GREEN', 'BLUE VIOLET',
+          'GOLDENROD', 'SKY BLUE', 'CORAL', 'CYAN', 'TURQUOISE', 'PINK', 'MEDIUM AQUAMARINE', 'PLUM',
+          'YELLOW', 'MEDIUM BLUE', 'PURPLE', 'YELLOW GREEN']
 
 
 class GuiAll(wx.Frame):
@@ -23,7 +28,8 @@ class GuiAll(wx.Frame):
         self.client = None
 
         self.pnl = wx.Panel(self)  # creates
-        self.pnl.SetBackgroundColour(wx.Colour('SLATE BLUE'))
+        color = COLORS[random.randint(START, COLOR_END)]
+        self.pnl.SetBackgroundColour(wx.Colour(color))
         self.sb = wx.StaticBox(self.pnl)  # sequence of items
         self.sbs = wx.BoxSizer(wx.VERTICAL)  # boarder
 
@@ -49,10 +55,10 @@ class GuiAll(wx.Frame):
         self.Close()
 
     def start_client(self, username):
-        """q
+        """
         starts client when signs in
         """
-        self.client = Client(username)
+        self.client = ClientManage(username)
 
     def start(self):
         """
@@ -102,16 +108,17 @@ class GuiSignIn(GuiAll):
         given by the user, and displays the text inside a message box.
         """
         username = self.param_user.GetValue()
-        GuiCallOrWait(username)
+        self.start_client(username)
+        GuiCallOrWait(username, self.client)
         self.Close(True)
 
 
 class GuiCallOrWait(GuiAll):
 
-    def __init__(self, username):
+    def __init__(self, username, client):
         super().__init__(None, "Call Window")
         self.username = username
-        self.start_client(username)
+        self.client = client
         self.options = self.client.connected
         self.timer = wx.Timer(self)
         #self.options = self.client.connected
@@ -178,6 +185,7 @@ class GuiCallOrWait(GuiAll):
         """
         #self.Close(True)
         self.client.answer()
+        self.Close(True)
 
     def on_dont_answer(self):
         """
@@ -185,6 +193,7 @@ class GuiCallOrWait(GuiAll):
         """
         #self.Close(True)
         self.client.dont_answer()
+        GuiCallOrWait(self.username, self.client)
         #GuiCallOrWait(self.username)
 
 
@@ -271,58 +280,20 @@ class GuiWait(GuiAll):
         if win32ui.MessageBox("user didnt answer :( go back to main window?", "didnt answer!!",
                               win32con.MB_YESNOCANCEL) == win32con.IDYES:
 
-            GuiCallOrWait(self.username)
+            GuiCallOrWait(self.username, self.client)
         else:
             self.client.close()
             self.Close(True)
 
 
-class GuiGettingCalled(GuiAll):
+def start_again(username, client):
     """
-    window which opens when getting called
+    starts again after ending call
     """
-    def __init__(self, client):
-        super().__init__(None, "BRINGGGGG")
-        print("here at gui getting called")
-        self.client = client
-        # person calling this user
-        self.person_calling = self.client.person_calling
-        print("{} is calling".format(self.person_calling))
-        # text:
-        text_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        label = str(self.person_calling) + " is calling"
-        wait_text = wx.StaticText(self.pnl, label=label)
-        text_sizer.Add(window=wait_text, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        # buttons:
-        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        # call button
-        answer_btn = wx.Button(self.pnl, label="answer")
-        answer_btn.Bind(wx.EVT_BUTTON, self.on_answer)
-        # wait for call button
-        dont_answer_btn = wx.Button(self.pnl, label="dont")
-        dont_answer_btn.Bind(wx.EVT_BUTTON, self.on_dont_answer)
-        btn_sizer.Add(window=answer_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        btn_sizer.Add(window=dont_answer_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        # sizers:
-        self.sbs.Add(text_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        self.sbs.Add(btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        print("starting window you want:")
-        self.start()
-        print("started")
-
-    def on_answer(self, e):
-        """
-        when answer clicked
-        """
-        self.Close(True)
-        self.client.answer()
-
-    def on_dont_answer(self, e):
-        """
-        when dont answer clicked
-        """
-        self.Close(True)
-        self.client.dont_answer()
+    #ex = []
+    #ex = wx.App(None)
+    GuiCallOrWait(username, client)
+    #ex.MainLoop()
 
 
 def main():

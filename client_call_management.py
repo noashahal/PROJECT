@@ -16,7 +16,7 @@ WAIT_KEY = 1
 PERSON_CALLING = 0
 
 
-class Client(object):
+class ClientManage(object):
     """
     class client Todo: write more
     """
@@ -68,6 +68,7 @@ class Client(object):
         except Exception as e:
             sock.close()
             print("Error in receive_mes: ", e)
+            sys.exit(EXIT)
 
     @staticmethod
     def send_mes(mes, sock):
@@ -164,7 +165,7 @@ class Client(object):
         starts call - if answered positive
         """
         print("yay!, starting call")
-        client_backup.main(calling, self.my_name)
+        client_backup.main(calling, self.my_name, self)
 
     def dont_answer(self):
         """
@@ -186,7 +187,7 @@ def main(name):
     """
     check my methods
     """
-    client = Client(name)
+    client = ClientManage(name)
     while True:
         time.sleep(TIME_SLEEP)
 
