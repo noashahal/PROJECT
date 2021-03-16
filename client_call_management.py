@@ -125,7 +125,7 @@ class ClientManage(object):
         while True:
             # gets and sets calling options
             calling_options = self.receive_mes(self.users_socket)
-            #print("options listener: {}".format(calling_options))
+            # print("options listener: {}".format(calling_options))
             self.connected = calling_options.split(',')
             time.sleep(TIME_SLEEP_USERS)
 

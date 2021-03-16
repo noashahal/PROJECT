@@ -64,13 +64,10 @@ class Server(object):
         """
         gets chunk and sends to server
         """
-        #try:
-        #print("mes "+mes.decode())
+        # print("mes "+mes.decode())
         length = len(mes)
         data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
         sock.send(data)
-        #except socket.error as e:
-            #print("socket send_mes fail: ", e)
 
     def handle_clients(self):
         """
@@ -81,7 +78,7 @@ class Server(object):
         while not done:
             try:
                 listening_socket, address = self.listen_socket.accept()
-                print("connected listening socket: {}".format(listening_socket))
+                print("listen socket connect: {}".format(listening_socket))
                 name = self.receive_mes(listening_socket)
                 # add to options:
                 self.client_dict[name] = listening_socket
@@ -108,17 +105,15 @@ class Server(object):
         """
         done = False
         users_socket, address = self.users_socket.accept()
-        #while not done:
         while True:
-            #try:
+            # try:
             # gets string of connected contacts
             options = ','.join(self.client_dict.keys())
             # sends options to client:
             self.send_mes(options.encode(), users_socket)
             time.sleep(TIME_SLEEP)
-            #except socket.error as msg:
-                #print("socket failure: ", msg)
-                #done = True
+            # except socket.error as msg:
+            #    print("socket failure: ", msg)
 
     def make_call(self):
         """

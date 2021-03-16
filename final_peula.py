@@ -18,7 +18,8 @@ BORDER = 5
 
 
 class ShowCapture(wx.Frame):
-    def __init__(self, client, frame, username, call_name, client_manage, fps=15):
+    def __init__(self, client, frame,
+                 username, call_name, client_manage, fps=15):
         wx.Frame.__init__(self, None)
         print("got to show capture in final peula")
         panel = wx.Panel(self, PANEL)
@@ -27,7 +28,7 @@ class ShowCapture(wx.Frame):
         self.frame = frame
         self.username = username
         self.call_name = call_name
-        #create a grid sizer with 5 pix between each cell
+        # create a grid sizer with 5 pix between each cell
         sizer = wx.GridBagSizer(GRID, GRID)
         height, width = self.frame.shape[:DIVIDE]
         self.orig_height = height
@@ -38,19 +39,19 @@ class ShowCapture(wx.Frame):
         end_btn = wx.Button(panel, -1, 'End Call')
         end_btn.Bind(wx.EVT_BUTTON, self.end_call)
         btn_sizer.Add(end_btn, 0)
-        #create image display widgets
+        # create image display widgets
 
         self.ImgControl = statbmp.GenStaticBitmap(panel, wx.ID_ANY, self.bmp)
 
-        #add widgets to the sizer grid
-        sizer.Add(btn_sizer, (0, 7), wx.DefaultSpan, wx.EXPAND | wx.CENTER, wx.ALIGN_CENTER)
-        #sizer.Add(self.ImgControl,
-                  #(3, 0), (1, 4), wx.EXPAND | wx.CENTER | wx.LEFT | wx.BOTTOM, GRID)
+        # add widgets to the sizer grid
+        sizer.Add(btn_sizer, (0, 7), wx.DefaultSpan,
+                  wx.EXPAND | wx.CENTER, wx.ALIGN_CENTER)
+        # sizer.Add(self.ImgControl,
+        # (3, 0), (1, 4), wx.EXPAND | wx.CENTER | wx.LEFT | wx.BOTTOM, GRID)
         sizer.Add(self.ImgControl,
                   (3, 0), (1, 4), wx.EXPAND | wx.CENTER, GRID)
 
-
-        #set the sizer and tell the Frame about the best size
+        # set the sizer and tell the Frame about the best size
         panel.SetSizer(sizer)
         sizer.SetSizeHints(self)
         panel.Layout()
@@ -60,7 +61,7 @@ class ShowCapture(wx.Frame):
         self.fps = fps
         self.timer.Start(TIMER/self.fps)
 
-        #bind timer events to the handler
+        # bind timer events to the handler
         self.Bind(wx.EVT_TIMER, self.next_frame)
 
     def next_frame(self, event):
@@ -78,8 +79,10 @@ class ShowCapture(wx.Frame):
         back to main window or disconnect
         """
         self.timer.Stop()
-        if win32ui.MessageBox("call ended. Go back to main window?", "call over",
-                              win32con.MB_YESNOCANCEL) == win32con.IDYES:
+        if win32ui.MessageBox(
+                "call ended. Go back to main window?",
+                "call over",
+                win32con.MB_YESNOCANCEL) == win32con.IDYES:
 
             self.client.close_all()
             self.Close(True)

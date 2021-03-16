@@ -3,15 +3,16 @@ import random
 import win32ui
 import win32con
 from client_call_management import *
-#from simple_window_2 import *
 WIDTH = 300
 LENGTH = 250
 START = 0
-COLOR_END = 19
+COLOR_END = 17
 BORDER = 5
-COLORS = ['SLATE BLUE', 'AQUAMARINE', 'RED', 'FOREST GREEN', 'SALMON', 'MEDIUM ORCHID', 'SEA GREEN', 'BLUE VIOLET',
-          'GOLDENROD', 'SKY BLUE', 'CORAL', 'CYAN', 'TURQUOISE', 'PINK', 'MEDIUM AQUAMARINE', 'PLUM',
-          'YELLOW', 'MEDIUM BLUE', 'PURPLE', 'YELLOW GREEN']
+COLORS = ['SLATE BLUE', 'AQUAMARINE', 'FOREST GREEN', 'SALMON',
+          'MEDIUM ORCHID', 'SEA GREEN', 'BLUE VIOLET',
+          'GOLDENROD', 'SKY BLUE', 'CORAL', 'CYAN',
+          'TURQUOISE', 'PINK', 'MEDIUM AQUAMARINE', 'PLUM',
+          'MEDIUM BLUE', 'PURPLE', 'YELLOW GREEN']
 
 
 class GuiAll(wx.Frame):
@@ -20,7 +21,7 @@ class GuiAll(wx.Frame):
     def __init__(self, e, title):
         super().__init__(e, title=title)
         self.SetSize((WIDTH, LENGTH))
-        #self.Centre()
+        # self.Centre()
         self.lock = threading.Lock()
         # The combo box (drop down menu)
         self.combo_box = None
@@ -85,18 +86,23 @@ class GuiSignIn(GuiAll):
         # username:
         username_sizer = wx.BoxSizer(wx.HORIZONTAL)
         text_user = wx.StaticText(self.pnl, label='Username')  # username text
-        username_sizer.Add(window=text_user, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        username_sizer.Add(window=self.param_user, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        username_sizer.Add(window=text_user, proportion=START,
+                           flag=wx.ALL | wx.CENTER, border=BORDER)
+        username_sizer.Add(window=self.param_user, proportion=START,
+                           flag=wx.ALL | wx.CENTER, border=BORDER)
 
         # sign in button:
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         sign_in_btn = wx.Button(self.pnl, label='Sign In')
         sign_in_btn.Bind(wx.EVT_BUTTON, self.on_signed_in)
-        btn_sizer.Add(window=sign_in_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        btn_sizer.Add(window=sign_in_btn, proportion=START,
+                      flag=wx.ALL | wx.CENTER, border=BORDER)
 
         # size:
-        self.sbs.Add(username_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        self.sbs.Add(btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(username_sizer, proportion=START,
+                     flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(btn_sizer, proportion=START,
+                     flag=wx.ALL | wx.CENTER, border=BORDER)
 
         self.start()
 
@@ -121,7 +127,7 @@ class GuiCallOrWait(GuiAll):
         self.client = client
         self.options = self.client.connected
         self.timer = wx.Timer(self)
-        #self.options = self.client.connected
+        # self.options = self.client.connected
         self.init_ui()
 
     def init_ui(self):
@@ -135,14 +141,17 @@ class GuiCallOrWait(GuiAll):
         call_btn = wx.Button(self.pnl, label="make call")
         call_btn.Bind(wx.EVT_BUTTON, self.on_call)
         # wait for call button
-        #wait_btn = wx.Button(self.pnl, label="wait for call")
-        #wait_btn.Bind(wx.EVT_BUTTON, self.on_wait)
+        # wait_btn = wx.Button(self.pnl, label="wait for call")
+        # wait_btn.Bind(wx.EVT_BUTTON, self.on_wait)
         # size
-        call_btn_sizer.Add(window=call_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        #call_btn_sizer.Add(window=wait_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        self.sbs.Add(call_btn_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        #wait_for_call_thread = threading.Thread(target=self.on_wait)
-        #wait_for_call_thread.start()
+        call_btn_sizer.Add(window=call_btn, proportion=START,
+                           flag=wx.ALL | wx.CENTER, border=BORDER)
+        # call_btn_sizer.Add(window=wait_btn, proportion=START,
+        # flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(call_btn_sizer, proportion=START,
+                     flag=wx.ALL | wx.CENTER, border=BORDER)
+        # wait_for_call_thread = threading.Thread(target=self.on_wait)
+        # wait_for_call_thread.start()
 
         self.Bind(wx.EVT_TIMER, self.on_wait)
         self.timer.Start(1000)
@@ -151,8 +160,8 @@ class GuiCallOrWait(GuiAll):
         self.start()
 
     def on_call(self, e):
-        #self.client.initiate_calling()
-        #self.options = self.client.connected
+        # self.client.initiate_calling()
+        # self.options = self.client.connected
         print("call or wait options: {}".format(self.options))
         GuiCallOptions(self.client, self.username)
         self.Close(True)
@@ -173,8 +182,10 @@ class GuiCallOrWait(GuiAll):
         when gets a call
         """
         person_calling = self.client.person_calling
-        if win32ui.MessageBox("{} is calling you. Do you want to answer?".format(self.client.person_calling),
-                              "Bringgggg", win32con.MB_YESNOCANCEL) == win32con.IDYES:
+        if win32ui.MessageBox(
+                "{} is calling you. Do you want to answer?"
+                .format(self.client.person_calling),
+                "Bringgggg", win32con.MB_YESNOCANCEL) == win32con.IDYES:
             self.on_answer()
         else:
             self.on_dont_answer()
@@ -183,7 +194,7 @@ class GuiCallOrWait(GuiAll):
         """
         when answer clicked
         """
-        #self.Close(True)
+        # self.Close(True)
         self.client.answer()
         self.Close(True)
 
@@ -191,24 +202,26 @@ class GuiCallOrWait(GuiAll):
         """
         when dont answer clicked
         """
-        #self.Close(True)
+        # self.Close(True)
         self.client.dont_answer()
         GuiCallOrWait(self.username, self.client)
-        #GuiCallOrWait(self.username)
+        # GuiCallOrWait(self.username)
 
 
 class GuiCallOptions(GuiAll):
 
     def __init__(self, client, username):
         super().__init__(None, "Options Window")
-        #self.text = wx.TextCtrl(self.pnl, style=wx.TE_MULTILINE)
+        # self.text = wx.TextCtrl(self.pnl, style=wx.TE_MULTILINE)
         self.username = username
         self.client = client
         self.options = self.client.connected
         if self.username in self.options:
             self.options.remove(self.username)
         print("call options, options: {}".format(self.options))
-        self.options_lstbox = wx.ListBox(self.pnl, choices=self.options, style=wx.LB_SINGLE, name="contacts")
+        self.options_lstbox = wx.ListBox(
+            self.pnl, choices=self.options,
+            style=wx.LB_SINGLE, name="contacts")
         self.init_ui()
 
     def init_ui(self):
@@ -216,16 +229,20 @@ class GuiCallOptions(GuiAll):
         options_sizer = wx.BoxSizer(wx.HORIZONTAL)
         call_btn = wx.Button(self.pnl, label='Call')
         call_btn.Bind(wx.EVT_BUTTON, self.on_call)
-        options_sizer.Add(window=self.options_lstbox, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        options_sizer.Add(window=call_btn, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        self.sbs.Add(options_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
+        options_sizer.Add(window=self.options_lstbox, proportion=START,
+                          flag=wx.ALL | wx.CENTER, border=BORDER)
+        options_sizer.Add(window=call_btn, proportion=START,
+                          flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(options_sizer, proportion=START,
+                     flag=wx.ALL | wx.CENTER, border=BORDER)
         self.start()
 
     def on_call(self, e):
         """
         when one option clicked
         """
-        calling = self.options_lstbox.GetString(self.options_lstbox.GetSelection())
+        calling = self.options_lstbox.GetString(
+            self.options_lstbox.GetSelection())
         print(calling)
         self.client.initiate_calling(calling)
         self.Close(True)
@@ -246,9 +263,12 @@ class GuiWait(GuiAll):
     def init_ui(self):
         text_sizer = wx.BoxSizer(wx.HORIZONTAL)
         wait_text = wx.StaticText(self.pnl, label='Waiting For Answer....')
-        text_sizer.Add(window=wait_text, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        self.sbs.Add(text_sizer, proportion=START, flag=wx.ALL | wx.CENTER, border=BORDER)
-        # wait_for_answer_thread = threading.Thread(target=self.on_wait_for_answer)
+        text_sizer.Add(window=wait_text, proportion=START,
+                       flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(text_sizer, proportion=START,
+                     flag=wx.ALL | wx.CENTER, border=BORDER)
+        # wait_for_answer_thread =
+        # threading.Thread(target=self.on_wait_for_answer)
         # wait_for_answer_thread.start()
 
         self.Bind(wx.EVT_TIMER, self.on_wait_for_answer)
@@ -263,7 +283,7 @@ class GuiWait(GuiAll):
         if not self.client.answered_call:
             print("waiting for answer")
         else:
-            #print('this is the error :)')
+            # print('this is the error :)')
             self.client.answered_call = False  # for next call
             self.timer.Stop()
             self.Close(True)
@@ -277,8 +297,9 @@ class GuiWait(GuiAll):
         if user didnt answer, gives 2 options
         back to main window or disconnect
         """
-        if win32ui.MessageBox("user didnt answer :( go back to main window?", "didnt answer!!",
-                              win32con.MB_YESNOCANCEL) == win32con.IDYES:
+        if win32ui.MessageBox(
+                "user didnt answer :( go back to main window?",
+                "didnt answer!!", win32con.MB_YESNOCANCEL) == win32con.IDYES:
 
             GuiCallOrWait(self.username, self.client)
         else:
@@ -290,10 +311,7 @@ def start_again(username, client):
     """
     starts again after ending call
     """
-    #ex = []
-    #ex = wx.App(None)
     GuiCallOrWait(username, client)
-    #ex.MainLoop()
 
 
 def main():
@@ -312,4 +330,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

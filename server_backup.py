@@ -1,11 +1,11 @@
 import threading
 import sys
 import socket
-#import numpy as np
-#import cv2 as cv
+# import numpy as np
+# import cv2 as cv
 import time
-#import pyaudio
-#from constants import *
+# import pyaudio
+# from constants import *
 EXIT = -1
 LISTEN = 10
 IP = '0.0.0.0'
@@ -34,14 +34,22 @@ class Server(object):
         """ constructor"""
         self.server_socket = None
         try:
-            self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
-            print('started socket at ip {} port {}'.format(IP, RECEIVE_VIDEO_PORT))
-            self.send_video_socket = self.start_socket(IP, SEND_VIDEO_PORT)
-            print('started socket at ip {} port {}'.format(IP, SEND_VIDEO_PORT))
-            self.receive_audio_socket = self.start_socket(IP, RECEIVE_AUDIO_PORT)
-            print('started socket at ip {} port {}'.format(IP, RECEIVE_AUDIO_PORT))
-            self.send_audio_socket = self.start_socket(IP, SEND_AUDIO_PORT)
-            print('started socket at ip {} port {}'.format(IP, SEND_AUDIO_PORT))
+            self.receive_video_socket = \
+                self.start_socket(IP, RECEIVE_VIDEO_PORT)
+            print('started socket at ip {} port {}'
+                  .format(IP, RECEIVE_VIDEO_PORT))
+            self.send_video_socket = \
+                self.start_socket(IP, SEND_VIDEO_PORT)
+            print('started socket at ip {} port {}'
+                  .format(IP, SEND_VIDEO_PORT))
+            self.receive_audio_socket = \
+                self.start_socket(IP, RECEIVE_AUDIO_PORT)
+            print('started socket at ip {} port {}'
+                  .format(IP, RECEIVE_AUDIO_PORT))
+            self.send_audio_socket = \
+                self.start_socket(IP, SEND_AUDIO_PORT)
+            print('started socket at ip {} port {}'
+                  .format(IP, SEND_AUDIO_PORT))
             self.client_video_dict = {}
             self.client_audio_dict = {}
 
@@ -84,10 +92,13 @@ class Server(object):
         while not done:
             try:
                 # starts threads
-                receive_video_client_socket, address = self.receive_video_socket.accept()
-                print("connected relay video: {}".format(receive_video_client_socket))
-                video_thread = threading.Thread(target=self.start_video_relay,
-                                                args=(receive_video_client_socket, ))
+                receive_video_client_socket, address = \
+                    self.receive_video_socket.accept()
+                print("connected relay video: {}"
+                      .format(receive_video_client_socket))
+                video_thread = \
+                    threading.Thread(target=self.start_video_relay,
+                                     args=(receive_video_client_socket, ))
                 audio_thread = threading.Thread(target=self.start_audio_relay)
                 video_thread.start()
                 audio_thread.start()
@@ -132,7 +143,8 @@ class Server(object):
         """
         try:
             self.add_audio_client()
-            receive_audio_client_socket, address = self.receive_audio_socket.accept()
+            receive_audio_client_socket, address = \
+                self.receive_audio_socket.accept()
             print("connected relay audio")
             name = self.receive_mes(receive_audio_client_socket)
             self.send_chunk("calling".encode(), receive_audio_client_socket)
@@ -157,9 +169,10 @@ class Server(object):
         adds name to dictionary
         """
         try:
-            #print("starting receive video")
+            # print("starting receive video")
             send_video_client_socket, address = self.send_video_socket.accept()
-            print("connected receive video: {}".format(send_video_client_socket))
+            print("connected receive video: {}"
+                  .format(send_video_client_socket))
             my_name = self.receive_mes(send_video_client_socket)
             self.client_video_dict[my_name] = send_video_client_socket
             self.send_chunk("listening vid".encode(), send_video_client_socket)
@@ -182,7 +195,8 @@ class Server(object):
             print("connected receive audio")
             my_name = self.receive_mes(send_audio_client_socket)
             self.client_audio_dict[my_name] = send_audio_client_socket
-            self.send_chunk("listening audio".encode(), send_audio_client_socket)
+            self.send_chunk("listening audio".encode(),
+                            send_audio_client_socket)
         except socket.error as e:
             print("socket add audio client fail: ", e)
             sys.exit(EXIT)
@@ -219,7 +233,6 @@ class Server(object):
             while True:
                 i += 1
                 data = receive_audio_socket.recv(CHUNK)
-                #print("got audio chunk number {} of length {}".format(i, len(data)))
                 if len(data) == 0:
                     break
                 send_audio_socket.send(data)
@@ -246,11 +259,13 @@ class Server(object):
         raw_chunk_size = b''
         raw_chunk_size_to_get = MAX_CHUNK_SIZE
         while len(raw_chunk_size) < raw_chunk_size_to_get:
-            raw_chunk_size += receive_video_socket.recv(raw_chunk_size_to_get - len(raw_chunk_size))
+            rec = raw_chunk_size_to_get - len(raw_chunk_size)
+            raw_chunk_size += receive_video_socket.recv(rec)
         try:
             chunk_size = int(raw_chunk_size.decode())
         except:
-            print('raw chunk size is {} its length is {}'.format(raw_chunk_size, len(raw_chunk_size)))
+            print('raw chunk size is {} its length is {}'
+                  .format(raw_chunk_size, len(raw_chunk_size)))
         left = chunk_size
         chunk = b''
         while left > END:
