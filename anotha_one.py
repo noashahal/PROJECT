@@ -1,145 +1,332 @@
-import threading
-import sys
-import socket
-import time
-TIME_SLEEP = 0.1
-MAX_CHUNK_SIZE = 10  # for zfill - len of messages
-EXIT = -1
-LISTEN = 10
-IP = '127.0.0.1'
-LISTEN_PORT = 1000
-CALL_PORT = 1001
-WAIT_KEY = 1
+import wx
+import random
+import win32ui
+import win32con
+from client_call_management import *
+WIDTH = 300
+LENGTH = 250
+START = 0
+COLOR_END = 17
+BORDER = 5
+COLORS = ['SLATE BLUE', 'AQUAMARINE', 'FOREST GREEN', 'SALMON',
+          'MEDIUM ORCHID', 'SEA GREEN', 'BLUE VIOLET',
+          'GOLDENROD', 'SKY BLUE', 'CORAL', 'CYAN',
+          'TURQUOISE', 'PINK', 'MEDIUM AQUAMARINE', 'PLUM',
+          'MEDIUM BLUE', 'PURPLE', 'YELLOW GREEN']
 
 
-class Client(object):
+class GuiAll(wx.Frame):
     """
-    class client Todo: write more
+    """
+    def __init__(self, e, title):
+        super().__init__(e, title=title)
+        self.SetSize((WIDTH, LENGTH))
+        # self.Centre()
+        self.lock = threading.Lock()
+        # The combo box (drop down menu)
+        self.combo_box = None
+        # The client object
+        self.client = None
+
+        self.pnl = wx.Panel(self)  # creates
+        color = COLORS[random.randint(START, COLOR_END)]
+        self.pnl.SetBackgroundColour(wx.Colour(color))
+        self.sb = wx.StaticBox(self.pnl)  # sequence of items
+        self.sbs = wx.BoxSizer(wx.VERTICAL)  # boarder
+
+        # menu:
+        self.make_menu()
+
+    def make_menu(self):
+        """
+        makes menu with quit
+        """
+        menu_bar = wx.MenuBar()  # creates a MenuBar
+        file_menu = wx.Menu()  # adds menu
+        menu_item = file_menu.Append(wx.ID_EXIT, 'Quit', 'Quit application')
+        menu_bar.Append(file_menu, 'Menu&')  # adds item to menu
+        self.SetMenuBar(menu_bar)  # sets menu bar
+        self.Bind(wx.EVT_MENU, self.on_quit, menu_item)  # binds quit function
+
+    def on_quit(self, e):
+        """
+        when the user presses the quit button,
+        the function is called, ending the GUI loop
+        """
+        self.Close()
+
+    def start_client(self, username):
+        """
+        starts client when signs in
+        """
+        self.client = ClientManage(username)
+
+    def start(self):
+        """
+        sets sizer and shows
+        """
+        self.SetSizer(self.sbs)
+        self.Centre()
+        self.Show(True)
+
+    def close(self):
+        self.Close(True)
+
+
+class GuiSignIn(GuiAll):
+    """
+    initiates ui
     """
     def __init__(self):
-        """
-        initiates
-        """
-        self.listen_socket = None
-        self.call_socket = None
-        self.my_name = "Tomer"
-        self.initiate()
+        super().__init__(None, "Sign In")
+        self.param_user = wx.TextCtrl(self.pnl)  # username panel
+        self.init_ui()
 
-    @staticmethod
-    def start_socket(ip, port):
-        """
-        starts and returns socket
-        """
-        try:
-            # initiate socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            # connect to server
-            sock.connect((ip, port))
-            print("connected with ip: {} and port: {}".format(ip, port))
-            return sock
-        except Exception as e:
-            print("Error start_socket", e)
+    def init_ui(self):
+        # username:
+        username_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        text_user = wx.StaticText(self.pnl, label='Username')  # username text
+        username_sizer.Add(window=text_user, proportion=START,
+                           flag=wx.ALL | wx.CENTER, border=BORDER)
+        username_sizer.Add(window=self.param_user, proportion=START,
+                           flag=wx.ALL | wx.CENTER, border=BORDER)
 
-    @staticmethod
-    def receive_mes(sock):
-        """
-        receives and returns message from client
-        """
-        try:
-            raw_data = sock.recv(MAX_CHUNK_SIZE)
-            data = raw_data.decode()
-            mes = "invalid message"
-            if data.isdigit():
-                mes = sock.recv(int(data)).decode()
-                mes = str(mes)
-            return mes
-        except Exception as e:
-            sock.close()
-            print("Error in receive_mes: ", e)
+        # sign in button:
+        btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        sign_in_btn = wx.Button(self.pnl, label='Sign In')
+        sign_in_btn.Bind(wx.EVT_BUTTON, self.on_signed_in)
+        btn_sizer.Add(window=sign_in_btn, proportion=START,
+                      flag=wx.ALL | wx.CENTER, border=BORDER)
 
-    @staticmethod
-    def send_mes(mes, sock):
-        """
-        gets chunk and sends to server
-        """
-        length = len(mes)
-        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
-        sock.send(data)
+        # size:
+        self.sbs.Add(username_sizer, proportion=START,
+                     flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(btn_sizer, proportion=START,
+                     flag=wx.ALL | wx.CENTER, border=BORDER)
 
-    def initiate(self):
-        """
-        initiates 2 threads:
-        listening and calling
-        """
-        listen_thread = threading.Thread(target=self.listener)
-        listen_thread.start()
-        call_thread = threading.Thread(target=self.caller)
-        call_thread.start()
+        self.start()
 
-    def listener(self):
+    def on_signed_in(self, e):
         """
-        connects listening socket,
-        waits for call
+        when the user presses the send button,
+        this function is called, which in turn
+        generates the query by combining all parameters
+        given by the user, and displays the text inside a message box.
         """
-        # connects listening socket:
-        self.listen_socket = self.start_socket(IP, LISTEN_PORT)
-        # sends name for dictionary
-        self.send_mes(self.my_name.encode(), self.listen_socket)
-        # gets call or nah:
-        mes = self.receive_mes(self.listen_socket)
-        print(mes)
-        answer = input()
-        self.send_mes(answer.encode(), self.listen_socket)
-        if answer == "Y":
-            self.start_call_rec()
+        username = self.param_user.GetValue()
+        self.start_client(username)
+        GuiCallOrWait(username, self.client)
+        self.Close(True)
+
+
+class GuiCallOrWait(GuiAll):
+
+    def __init__(self, username, client):
+        super().__init__(None, "Call Window")
+        self.username = username
+        self.client = client
+        self.options = self.client.connected
+        self.timer = wx.Timer(self)
+        # self.options = self.client.connected
+        self.init_ui()
+
+    def init_ui(self):
+        """
+        call window
+        options for calling or waiting for a call
+        """
+        # buttons
+        call_btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        # call button
+        call_btn = wx.Button(self.pnl, label="make call")
+        call_btn.Bind(wx.EVT_BUTTON, self.on_call)
+        # wait for call button
+        # wait_btn = wx.Button(self.pnl, label="wait for call")
+        # wait_btn.Bind(wx.EVT_BUTTON, self.on_wait)
+        # size
+        call_btn_sizer.Add(window=call_btn, proportion=START,
+                           flag=wx.ALL | wx.CENTER, border=BORDER)
+        # call_btn_sizer.Add(window=wait_btn, proportion=START,
+        # flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(call_btn_sizer, proportion=START,
+                     flag=wx.ALL | wx.CENTER, border=BORDER)
+        # wait_for_call_thread = threading.Thread(target=self.on_wait)
+        # wait_for_call_thread.start()
+
+        self.Bind(wx.EVT_TIMER, self.on_wait)
+        self.timer.Start(1000)
+
+        print("GOT HERE")
+        self.start()
+
+    def on_call(self, e):
+        # self.client.initiate_calling()
+        # self.options = self.client.connected
+        print("call or wait options: {}".format(self.options))
+        GuiCallOptions(self.client, self.username)
+        self.Close(True)
+
+    def on_wait(self, e):
+        """
+        waits for someone to call
+        """
+        print("waiting")
+        if self.client.being_called:
+            self.Close(True)
+            self.timer.Stop()
+            self.client.being_called = False  # for next call
+            self.getting_called()
+
+    def getting_called(self):
+        """
+        when gets a call
+        """
+        person_calling = self.client.person_calling
+        if win32ui.MessageBox(
+                "{} is calling you. Do you want to answer?"
+                .format(self.client.person_calling),
+                "Bringgggg", win32con.MB_YESNOCANCEL) == win32con.IDYES:
+            self.on_answer()
         else:
-            print("bye guys, not listening no more")
-            self.listen_socket.close()  # won't happen forreal
+            self.on_dont_answer()
 
-    def caller(self):
+    def on_answer(self):
         """
-        checks if wants to call if so, gets options and calls
+        when answer clicked
         """
-        # connects calling socket:
-        print("do you want to call? yes/no")
-        ans = input()
-        if ans == "yes":
-            self.call_socket = self.start_socket(IP, CALL_PORT)
-            # sends name
-            self.send_mes(self.my_name.encode(), self.call_socket)
-            # gets calling options
-            options = self.receive_mes(self.call_socket)
-            print("options: {}".format(options))
-            print("Enter person you want to call")
-            calling = input()
-            self.send_mes(calling.encode(), self.call_socket)
-            answer = self.receive_mes(self.call_socket)
-            if answer.startswith("no"):
-                print("didn't answer")
-                self.call_socket.close()
+        # self.Close(True)
+        self.client.answer()
+        self.Close(True)
+
+    def on_dont_answer(self):
+        """
+        when dont answer clicked
+        """
+        # self.Close(True)
+        self.client.dont_answer()
+        GuiCallOrWait(self.username, self.client)
+        # GuiCallOrWait(self.username)
+
+
+class GuiCallOptions(GuiAll):
+
+    def __init__(self, client, username):
+        super().__init__(None, "Options Window")
+        # self.text = wx.TextCtrl(self.pnl, style=wx.TE_MULTILINE)
+        self.username = username
+        self.client = client
+        self.options = self.client.connected
+        if self.username in self.options:
+            self.options.remove(self.username)
+        print("call options, options: {}".format(self.options))
+        self.options_lstbox = wx.ListBox(
+            self.pnl, choices=self.options,
+            style=wx.LB_SINGLE, name="contacts")
+        self.init_ui()
+
+    def init_ui(self):
+        # call options
+        options_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        call_btn = wx.Button(self.pnl, label='Call')
+        call_btn.Bind(wx.EVT_BUTTON, self.on_call)
+        options_sizer.Add(window=self.options_lstbox, proportion=START,
+                          flag=wx.ALL | wx.CENTER, border=BORDER)
+        options_sizer.Add(window=call_btn, proportion=START,
+                          flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(options_sizer, proportion=START,
+                     flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.start()
+
+    def on_call(self, e):
+        """
+        when one option clicked
+        """
+        calling = self.options_lstbox.GetString(
+            self.options_lstbox.GetSelection())
+        print(calling)
+        self.client.initiate_calling(calling)
+        self.Close(True)
+        GuiWait(self.username, self.client)
+
+
+class GuiWait(GuiAll):
+    """
+    window in which waits for answer
+    """
+    def __init__(self, username, client):
+        super().__init__(None, "Wait Window")
+        self.username = username
+        self.client = client
+        self.timer = wx.Timer(self)
+        self.init_ui()
+
+    def init_ui(self):
+        text_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        wait_text = wx.StaticText(self.pnl, label='Waiting For Answer....')
+        text_sizer.Add(window=wait_text, proportion=START,
+                       flag=wx.ALL | wx.CENTER, border=BORDER)
+        self.sbs.Add(text_sizer, proportion=START,
+                     flag=wx.ALL | wx.CENTER, border=BORDER)
+        # wait_for_answer_thread =
+        # threading.Thread(target=self.on_wait_for_answer)
+        # wait_for_answer_thread.start()
+
+        self.Bind(wx.EVT_TIMER, self.on_wait_for_answer)
+        self.timer.Start(1000)
+        self.start()
+
+    def on_wait_for_answer(self, e):
+        """
+        waits for someone to call
+        """
+        print("waiting")
+        if not self.client.answered_call:
+            print("waiting for answer")
+        else:
+            # print('this is the error :)')
+            self.client.answered_call = False  # for next call
+            self.timer.Stop()
+            self.Close(True)
+            if self.client.answered:  # if answered, starts call
+                self.client.start_call(self.client.chosen_contact)
             else:
-                self.start_call_send()
+                self.didnt_answer_window()
+
+    def didnt_answer_window(self):
+        """
+        if user didnt answer, gives 2 options
+        back to main window or disconnect
+        """
+        if win32ui.MessageBox(
+                "{} didnt answer :( go back to main window?".format(self.client.chosen_contact),
+                "didnt answer!!", win32con.MB_YESNOCANCEL) == win32con.IDYES:
+
+            GuiCallOrWait(self.username, self.client)
         else:
-            print("ok not calling")
+            self.client.close()
+            self.Close(True)
 
-    @staticmethod
-    def start_call_rec():
-        print("yay!, receiving call")
 
-    @staticmethod
-    def start_call_send():
-        print("yay!, calling")
+def start_again(username, client):
+    """
+    starts again after ending call
+    """
+    GuiCallOrWait(username, client)
 
 
 def main():
     """
-    check my methods
+    begins an app loop,
+    creates a GUI.
+    when user quits, ends loop.
     """
-    client = Client()
-    while True:
-        time.sleep(TIME_SLEEP)
+    ex = []
+    ex = wx.App(None)
+    # ex = wx.App()
+    GuiSignIn()
+    ex.MainLoop()
+    # del ex
 
 
 if __name__ == '__main__':
     main()
-

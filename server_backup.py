@@ -25,14 +25,14 @@ WID = 3
 HIGH = 4
 WAIT_KEY = 1
 END = 0
+ADD = 1
 MAX_CHUNK_SIZE = 10  # for zfill - len of messages
 CHUNK = 1024
 
 
 class Server(object):
     def __init__(self):
-        """ constructor"""
-        self.server_socket = None
+        """ constructs server - starts sockets"""
         try:
             self.receive_video_socket = \
                 self.start_socket(IP, RECEIVE_VIDEO_PORT)
@@ -228,12 +228,10 @@ class Server(object):
         without playing audio!
         different stream for sending and receiving!
         """
-        i = 0
         try:
             while True:
-                i += 1
                 data = receive_audio_socket.recv(CHUNK)
-                if len(data) == 0:
+                if len(data) == END:
                     break
                 send_audio_socket.send(data)
         except KeyboardInterrupt:
@@ -245,14 +243,14 @@ class Server(object):
     @staticmethod
     def send_chunk(chunk, send_socket):
         """
-        gets chunk and sends to server
+        gets chunk and socket and sends
         """
         length = len(chunk)
         data = str(length).zfill(MAX_CHUNK_SIZE).encode() + chunk
         send_socket.send(data)
 
     @staticmethod
-    def receive_chunk(receive_video_socket):
+    def receive_chunk(receive_socket):
         """
         gets chunk from server
         """
@@ -260,7 +258,7 @@ class Server(object):
         raw_chunk_size_to_get = MAX_CHUNK_SIZE
         while len(raw_chunk_size) < raw_chunk_size_to_get:
             rec = raw_chunk_size_to_get - len(raw_chunk_size)
-            raw_chunk_size += receive_video_socket.recv(rec)
+            raw_chunk_size += receive_socket.recv(rec)
         try:
             chunk_size = int(raw_chunk_size.decode())
         except:
@@ -269,7 +267,7 @@ class Server(object):
         left = chunk_size
         chunk = b''
         while left > END:
-            chunk += receive_video_socket.recv(left)
+            chunk += receive_socket.recv(left)
             left = left - len(chunk)
         return chunk
 
@@ -289,15 +287,6 @@ class Server(object):
         except Exception as e:
             client_socket.close()
             print("Error in receive_mes: ", e)
-
-    def close_all(self):
-        """
-        closes all sockets and connections
-        """
-        self.receive_video_socket.close()
-        self.send_video_socket.close()
-        self.receive_audio_socket.close()
-        self.send_audio_socket.close()
 
 
 def main():

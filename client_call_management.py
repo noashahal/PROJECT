@@ -35,7 +35,7 @@ class ClientManage(object):
         self.answered = False  # answer from other user
         self.person_calling = ""
         self.chosen_contact = ""
-        self.initiate()
+        self.initiate_thread()
 
     @staticmethod
     def start_socket(ip, port):
@@ -80,7 +80,7 @@ class ClientManage(object):
         data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
         sock.send(data)
 
-    def initiate(self):
+    def initiate_thread(self):
         """
         initiates thread:
         listening for call

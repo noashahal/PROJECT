@@ -89,7 +89,7 @@ class Server(object):
                 self.send_mes(options.encode(), listening_socket)
                 users_thread = threading.Thread(target=self.users)
                 users_thread.start()
-                client_thread = threading.Thread(target=self.make_call)
+                client_thread = threading.Thread(target=self.handle_call)
                 client_thread.start()
 
             except socket.error as msg:
@@ -115,7 +115,7 @@ class Server(object):
             # except socket.error as msg:
             #    print("socket failure: ", msg)
 
-    def make_call(self):
+    def handle_call(self):
         """
         sends options to calling client
         client chooses,

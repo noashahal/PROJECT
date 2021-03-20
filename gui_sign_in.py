@@ -2,12 +2,14 @@ import wx
 import random
 import win32ui
 import win32con
+import pathlib
 from client_call_management import *
 WIDTH = 300
 LENGTH = 250
 START = 0
 COLOR_END = 17
 BORDER = 5
+FILE_PATH = str(pathlib.Path().absolute())
 COLORS = ['SLATE BLUE', 'AQUAMARINE', 'FOREST GREEN', 'SALMON',
           'MEDIUM ORCHID', 'SEA GREEN', 'BLUE VIOLET',
           'GOLDENROD', 'SKY BLUE', 'CORAL', 'CYAN',
@@ -29,6 +31,7 @@ class GuiAll(wx.Frame):
         self.client = None
 
         self.pnl = wx.Panel(self)  # creates
+        self.SetIcon(wx.Icon(FILE_PATH + r"\Pic.png"))
         color = COLORS[random.randint(START, COLOR_END)]
         self.pnl.SetBackgroundColour(wx.Colour(color))
         self.sb = wx.StaticBox(self.pnl)  # sequence of items
@@ -298,7 +301,7 @@ class GuiWait(GuiAll):
         back to main window or disconnect
         """
         if win32ui.MessageBox(
-                "user didnt answer :( go back to main window?",
+                "{} didnt answer :( go back to main window?".format(self.client.chosen_contact),
                 "didnt answer!!", win32con.MB_YESNOCANCEL) == win32con.IDYES:
 
             GuiCallOrWait(self.username, self.client)
