@@ -15,11 +15,12 @@ GRID = 5  # FOR GRID SIZE
 DIVIDE = 2  # FOR FRAME SHAPE
 START = 0
 BORDER = 5
+FPS = 15
 
 
 class ShowCapture(wx.Frame):
     def __init__(self, client, frame,
-                 username, call_name, client_manage, fps=15):
+                 username, call_name, client_manage, fps=FPS):
         wx.Frame.__init__(self, None)
         print("got to show capture in final peula")
         panel = wx.Panel(self, PANEL)
@@ -68,6 +69,10 @@ class ShowCapture(wx.Frame):
         """
         receives video and shows
         """
+        if self.client.done:
+            print("here")
+            self.timer.Stop()
+            self.Close(True)
         self.frame = self.client.get_frame()
         self.bmp.CopyFromBuffer(self.frame)
         self.ImgControl.SetBitmap(self.bmp)

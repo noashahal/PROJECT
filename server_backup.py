@@ -33,6 +33,7 @@ CHUNK = 1024
 class Server(object):
     def __init__(self):
         """ constructs server - starts sockets"""
+        self.server_socket = None
         try:
             self.receive_video_socket = \
                 self.start_socket(IP, RECEIVE_VIDEO_PORT)
@@ -55,10 +56,10 @@ class Server(object):
 
         except socket.error as e:
             print("socket creation fail: ", e)
-            sys.exit(EXIT)
+            self.close_all()
         except Exception as e:
             print("server construct fail: ", e)
-            sys.exit(EXIT)
+            self.close_all()
 
     @staticmethod
     def start_socket(ip, port):
@@ -130,10 +131,10 @@ class Server(object):
             self.receive_and_send_video(receive_video_client_socket, send_sock)
         except socket.error as e:
             print("socket video relay fail: ", e)
-            sys.exit(EXIT)
+            self.close_all()
         except Exception as e:
             print("video relay exception: ", e)
-            sys.exit(EXIT)
+            self.close_all()
 
     def start_audio_relay(self):
         """
@@ -157,10 +158,10 @@ class Server(object):
             self.receive_and_send_audio(receive_audio_client_socket, send_sock)
         except socket.error as e:
             print("socket audio relay fail: ", e)
-            sys.exit(EXIT)
+            self.close_all()
         except Exception as e:
             print("audio relay exception: ", e)
-            sys.exit(EXIT)
+            self.close_all()
 
     def add_video_client(self):
         """
@@ -179,10 +180,10 @@ class Server(object):
             print(self.client_video_dict)
         except socket.error as e:
             print("socket add video client fail: ", e)
-            sys.exit(EXIT)
+            self.close_all()
         except Exception as e:
             print("add video client exception: ", e)
-            sys.exit(EXIT)
+            self.close_all()
 
     def add_audio_client(self):
         """
@@ -199,10 +200,10 @@ class Server(object):
                             send_audio_client_socket)
         except socket.error as e:
             print("socket add audio client fail: ", e)
-            sys.exit(EXIT)
+            self.close_all()
         except Exception as e:
             print("add audio client exception: ", e)
-            sys.exit(EXIT)
+            self.close_all()
 
     def receive_and_send_video(self, receive_video_socket, send_video_socket):
         """
@@ -220,6 +221,7 @@ class Server(object):
 
         except ConnectionAbortedError as e:
             receive_video_socket.close()
+            self.close_all()
 
     @staticmethod
     def receive_and_send_audio(receive_audio_socket, send_audio_socket):
@@ -271,8 +273,7 @@ class Server(object):
             left = left - len(chunk)
         return chunk
 
-    @staticmethod
-    def receive_mes(client_socket):
+    def receive_mes(self, client_socket):
         """
         receives and returns message from client
         """
@@ -287,6 +288,17 @@ class Server(object):
         except Exception as e:
             client_socket.close()
             print("Error in receive_mes: ", e)
+            self.close_all()
+
+    def close_all(self):
+        """
+        closes all sockets and connections
+        """
+        self.receive_video_socket.close()
+        self.send_video_socket.close()
+        self.receive_audio_socket.close()
+        self.send_audio_socket.close()
+        sys.exit(EXIT)
 
 
 def main():
