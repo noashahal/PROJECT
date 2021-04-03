@@ -188,7 +188,7 @@ class GuiCallOrWait(GuiAll):
         if win32ui.MessageBox(
                 "{} is calling you. Do you want to answer?"
                 .format(self.client.person_calling),
-                "Bringgggg", win32con.MB_YESNOCANCEL) == win32con.IDYES:
+                "Bringgggg", win32con.MB_YESNO) == win32con.IDYES:
             self.on_answer()
         else:
             self.on_dont_answer()
@@ -302,7 +302,7 @@ class GuiWait(GuiAll):
         """
         if win32ui.MessageBox(
                 "{} didnt answer :( go back to main window?".format(self.client.chosen_contact),
-                "didnt answer!!", win32con.MB_YESNOCANCEL) == win32con.IDYES:
+                "didnt answer!!", win32con.MB_YESNO) == win32con.IDYES:
 
             GuiCallOrWait(self.username, self.client)
         else:

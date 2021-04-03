@@ -87,7 +87,7 @@ class ShowCapture(wx.Frame):
         if win32ui.MessageBox(
                 "call ended. Go back to main window?",
                 "call over",
-                win32con.MB_YESNOCANCEL) == win32con.IDYES:
+                win32con.MB_YESNO) == win32con.IDYES:
 
             self.client.close_all()
             self.Close(True)
