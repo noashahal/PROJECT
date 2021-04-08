@@ -105,10 +105,10 @@ class OGServer(object):
                 audio_thread.start()
 
             except socket.error as msg:
-                print("socket failure: ", msg)
+                print("socket failure handle clients: ", msg)
                 done = True
             except Exception as msg:
-                print("exception: ", msg)
+                print("exception handle clients: ", msg)
                 done = True
 
     def start_video_relay(self, receive_video_client_socket):
@@ -301,14 +301,6 @@ class OGServer(object):
         sys.exit(EXIT)
 
 
-def start_call_og_sever():
-    """
-    starts call
-    """
-    srvr = OGServer()
-    srvr.handle_clients()
-
-
 def main():
     """
     todo: write more
@@ -317,9 +309,9 @@ def main():
         srvr = OGServer()
         srvr.handle_clients()
     except socket.error as msg:
-        print("socket failure: ", msg)
+        print("socket failure main: ", msg)
     except Exception as msg:
-        print("exception: ", msg)
+        print("exception main: ", msg)
 
 
 if __name__ == '__main__':

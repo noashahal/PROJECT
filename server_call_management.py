@@ -22,7 +22,8 @@ class Server(object):
             self.listen_socket = self.start_socket(IP, LISTEN_PORT)
             self.users_socket = self.start_socket(IP, USERS_PORT)
             self.client_dict = {}
-            # self.srvr = server_backup.OGServer()
+            # self.start_call()
+
         except socket.error as e:
             print("socket creation fail: ", e)
             self.call_socket.close()
@@ -66,13 +67,13 @@ class Server(object):
         gets chunk and sends to server
         """
         # print("mes "+mes.decode())
-        try:
-            length = len(mes)
-            data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
-            sock.send(data)
-        except socket.error as msg:
-            print(msg)
-            sock.close()
+        # try:
+        length = len(mes)
+        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
+        sock.send(data)
+        # except socket.error as msg:
+        #     print(msg)
+        #     sock.close()
 
     def handle_clients(self):
         """
@@ -110,15 +111,16 @@ class Server(object):
         """
         done = False
         users_socket, address = self.users_socket.accept()
-        while True:
-            # try:
-            # gets string of connected contacts
-            options = ','.join(self.client_dict.keys())
-            # sends options to client:
-            self.send_mes(options.encode(), users_socket)
-            time.sleep(TIME_SLEEP)
-            # except socket.error as msg:
-            #    print("socket failure: ", msg)
+        while not done:
+            try:
+                # gets string of connected contacts
+                options = ','.join(self.client_dict.keys())
+                # sends options to client:
+                self.send_mes(options.encode(), users_socket)
+                time.sleep(TIME_SLEEP)
+            except socket.error as msg:
+                print("socket failure users: ", msg)
+                done = True
 
     def handle_call(self):
         """
@@ -153,7 +155,9 @@ class Server(object):
     def start_call():
         # server_backup.main()
         # print("heyo")
-        server_backup.start_call_og_sever()
+        # server_backup.start_call_og_sever()
+        srvr = server_backup.OGServer()
+        srvr.handle_clients()
 
 
 def main():
