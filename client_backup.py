@@ -36,7 +36,7 @@ EXIT = -1
 ADD = 1  # for counter
 
 
-class Client(object):
+class OGClient(object):
     """
     class client Todo: write more
     """
@@ -53,6 +53,7 @@ class Client(object):
         self.lock = threading.Lock()
         self.done = False
         self.client_manage = client_manage
+        self.call_ended = False
 
         self.voice_device = pyaudio.PyAudio()
 
@@ -81,6 +82,7 @@ class Client(object):
         """
         sends video to server
         """
+        print("got to send video")
         self.send_video_socket = self.start_socket(IP, SEND_VIDEO_PORT)
         self.send_chunk(self.call_name.encode(), self.send_video_socket)
         mes = self.receive_mes(self.send_video_socket)
@@ -99,6 +101,7 @@ class Client(object):
         code = ('start' + (BUF - len(code)) * 'a').encode('utf-8')
         # try:
         while cap.isOpened() and not self.done:
+            # print("here!!!!!")
             try:
                 ret, frame = cap.read()
                 if ret:
@@ -113,6 +116,7 @@ class Client(object):
             except socket.error as msg:
                 print("socket failure send video: {}".format(msg))
                 self.done = True
+                self.call_ended = True
         # except ConnectionAbortedError as e:
         # print("exception send video")
         self.send_video_socket.close()
@@ -153,20 +157,26 @@ class Client(object):
         """
         receives and shows video from server
         """
-        print("receive video!!!!!!!!!!!!!!!")
-        self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
-        self.send_chunk(self.my_name.encode(), self.receive_video_socket)
-        print(self.receive_mes(self.receive_video_socket))
-        # try:
-        frame = self.get_frame()
-        show_video(self, frame, self.my_name,
-                   self.call_name, self.client_manage)
+        try:
+            print("receive video!!!!!!!!!!!!!!!")
+            self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
+            print("1!!!")
+            self.send_chunk(self.my_name.encode(), self.receive_video_socket)
+            print("2!!!")
+            print(self.receive_mes(self.receive_video_socket))
+            print("3!!!")
+            # try:
+            frame = self.get_frame()
+            print("4!!!")
+            show_video(self, frame, self.my_name,
+                       self.call_name, self.client_manage)
+            print("5!!!")
 
-        # except Exception as e:
-        #     self.receive_video_socket.close()
-        #     cv.destroyAllWindows()
-        #     print("Error receive_video:", e)
-        #     sys.exit(EXIT)
+        except Exception as e:
+            self.receive_video_socket.close()
+            cv.destroyAllWindows()
+            print("Error receive_video:", e)
+            # sys.exit(EXIT)
 
     def get_frame(self):
         """
@@ -186,6 +196,7 @@ class Client(object):
         byte_frame = b''.join(chunks)
         frame = np.frombuffer(
             byte_frame, dtype=np.uint8).reshape(HEIGHT, WIDTH, WID)
+        # print("got frame")
         return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     @staticmethod
@@ -246,9 +257,12 @@ class Client(object):
             except socket.error as msg:
                 print("socket failure receive audio: {}".format(msg))
                 self.done = True
+                self.call_ended = True
             except KeyboardInterrupt:
                 print("exception receive audio")
                 self.done = True
+                self.call_ended = True
+        self.call_ended = True
         self.receive_audio_socket.close()
         # stream_receive.close()
         # p_receive.terminate()
@@ -286,9 +300,12 @@ class Client(object):
             except socket.error as msg:
                 print("socket failure send audio: {}".format(msg))
                 self.done = True
+                self.call_ended = True
+                # self.close_all()
             except Exception as e:
                 print("sending audio error: {}".format(e))
                 self.done = True
+                self.call_ended = True
         self.send_audio_socket.close()
         self.voice_stream.close()
         self.voice_device.terminate()
@@ -297,7 +314,7 @@ class Client(object):
         """
         closes all sockets and connections
         """
-        cv2.destroyAllWindows()
+        cv.destroyAllWindows()
         self.done = True
         # sys.exit(EXIT)
 
@@ -306,6 +323,6 @@ def main(call_name, my_name, client_manage):
     """
     check my methods
     """
-    client = Client(call_name, my_name, client_manage)
+    client = OGClient(call_name, my_name, client_manage)
     while True:
         time.sleep(TIME_SLEEP)

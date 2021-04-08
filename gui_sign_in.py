@@ -315,6 +315,7 @@ def start_again(username, client):
     starts again after ending call
     """
     GuiCallOrWait(username, client)
+    print("starts again")
 
 
 def main():

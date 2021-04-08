@@ -165,7 +165,8 @@ class ClientManage(object):
         starts call - if answered positive
         """
         print("yay!, starting call")
-        client_backup.main(calling, self.my_name, self)
+        # client_backup.main(calling, self.my_name, self)
+        client = client_backup.OGClient(calling, self.my_name, self)
 
     def dont_answer(self):
         """

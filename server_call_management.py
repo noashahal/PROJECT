@@ -22,6 +22,7 @@ class Server(object):
             self.listen_socket = self.start_socket(IP, LISTEN_PORT)
             self.users_socket = self.start_socket(IP, USERS_PORT)
             self.client_dict = {}
+            # self.srvr = server_backup.OGServer()
         except socket.error as e:
             print("socket creation fail: ", e)
             self.call_socket.close()
@@ -65,9 +66,13 @@ class Server(object):
         gets chunk and sends to server
         """
         # print("mes "+mes.decode())
-        length = len(mes)
-        data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
-        sock.send(data)
+        try:
+            length = len(mes)
+            data = str(length).zfill(MAX_CHUNK_SIZE).encode() + mes
+            sock.send(data)
+        except socket.error as msg:
+            print(msg)
+            sock.close()
 
     def handle_clients(self):
         """
@@ -146,7 +151,9 @@ class Server(object):
 
     @staticmethod
     def start_call():
-        server_backup.main()
+        # server_backup.main()
+        # print("heyo")
+        server_backup.start_call_og_sever()
 
 
 def main():

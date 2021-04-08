@@ -2,6 +2,7 @@ import wx
 from wx.lib import statbmp
 import cv2
 from gui_sign_in import *
+import client_call_management
 from client_backup import *
 CODE = b'start'
 WID = 3
@@ -15,12 +16,11 @@ GRID = 5  # FOR GRID SIZE
 DIVIDE = 2  # FOR FRAME SHAPE
 START = 0
 BORDER = 5
-FPS = 15
 
 
 class ShowCapture(wx.Frame):
     def __init__(self, client, frame,
-                 username, call_name, client_manage, fps=FPS):
+                 username, call_name, client_manage, fps=15):
         wx.Frame.__init__(self, None)
         print("got to show capture in final peula")
         panel = wx.Panel(self, PANEL)
@@ -69,21 +69,28 @@ class ShowCapture(wx.Frame):
         """
         receives video and shows
         """
-        if self.client.done:
-            print("here")
+        if self.client.call_ended:
+            print("final peula - call ended")
             self.timer.Stop()
-            self.Close(True)
+            new_client = client_call_management.ClientManage(self.username)
+            self.end_call(new_client)
         self.frame = self.client.get_frame()
+
         self.bmp.CopyFromBuffer(self.frame)
         self.ImgControl.SetBitmap(self.bmp)
         self.Update()
 
-    def end_call(self, event):
+    def end_button(self, event):
         """
-        if user didnt answer, gives 2 options
-        back to main window or disconnect
+        helper because of event handler, calls end_call()
         """
         self.timer.Stop()
+        self.end_call(self.client_manage)
+
+    def end_call(self, client_manage):
+        """
+        call ends, gives option to go back to main window
+        """
         if win32ui.MessageBox(
                 "call ended. Go back to main window?",
                 "call over",
@@ -91,11 +98,16 @@ class ShowCapture(wx.Frame):
 
             self.client.close_all()
             self.Close(True)
-            start_again(self.username, self.client_manage)
+
+            # new_client = client_call_management.ClientManage(self.username)
+            start_again(self.username, client_manage)
+            # start_again(self.username, self.client_manage)
 
         else:
+
             self.client.close_all()
             self.Close(True)
+            # sys.exit(EXIT)
 
 
 def show_video(client, frame, username, call_name, client_manage):

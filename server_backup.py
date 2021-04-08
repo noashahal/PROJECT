@@ -30,7 +30,7 @@ MAX_CHUNK_SIZE = 10  # for zfill - len of messages
 CHUNK = 1024
 
 
-class Server(object):
+class OGServer(object):
     def __init__(self):
         """ constructs server - starts sockets"""
         self.server_socket = None
@@ -301,12 +301,20 @@ class Server(object):
         sys.exit(EXIT)
 
 
+def start_call_og_sever():
+    """
+    starts call
+    """
+    srvr = OGServer()
+    srvr.handle_clients()
+
+
 def main():
     """
     todo: write more
     """
     try:
-        srvr = Server()
+        srvr = OGServer()
         srvr.handle_clients()
     except socket.error as msg:
         print("socket failure: ", msg)
