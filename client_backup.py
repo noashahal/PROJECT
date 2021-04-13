@@ -160,17 +160,12 @@ class OGClient(object):
         try:
             print("receive video!!!!!!!!!!!!!!!")
             self.receive_video_socket = self.start_socket(IP, RECEIVE_VIDEO_PORT)
-            print("1!!!")
             self.send_chunk(self.my_name.encode(), self.receive_video_socket)
-            print("2!!!")
             print(self.receive_mes(self.receive_video_socket))
-            print("3!!!")
             # try:
             frame = self.get_frame()
-            print("4!!!")
             show_video(self, frame, self.my_name,
                        self.call_name, self.client_manage)
-            print("5!!!")
 
         except Exception as e:
             self.receive_video_socket.close()
@@ -301,11 +296,13 @@ class OGClient(object):
                 print("socket failure send audio: {}".format(msg))
                 self.done = True
                 self.call_ended = True
+                print("call ended is true in thread")
                 # self.close_all()
             except Exception as e:
                 print("sending audio error: {}".format(e))
                 self.done = True
                 self.call_ended = True
+        print("i am here noa and ayelet")
         self.send_audio_socket.close()
         self.voice_stream.close()
         self.voice_device.terminate()

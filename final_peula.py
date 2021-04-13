@@ -74,11 +74,11 @@ class ShowCapture(wx.Frame):
             self.timer.Stop()
             new_client = client_call_management.ClientManage(self.username)
             self.end_call(new_client)
-        self.frame = self.client.get_frame()
-
-        self.bmp.CopyFromBuffer(self.frame)
-        self.ImgControl.SetBitmap(self.bmp)
-        self.Update()
+        else:
+            self.frame = self.client.get_frame()
+            self.bmp.CopyFromBuffer(self.frame)
+            self.ImgControl.SetBitmap(self.bmp)
+            self.Update()
 
     def end_button(self, event):
         """
@@ -102,9 +102,7 @@ class ShowCapture(wx.Frame):
             # new_client = client_call_management.ClientManage(self.username)
             start_again(self.username, client_manage)
             # start_again(self.username, self.client_manage)
-
         else:
-
             self.client.close_all()
             self.Close(True)
             # sys.exit(EXIT)
