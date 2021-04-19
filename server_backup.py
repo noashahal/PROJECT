@@ -298,7 +298,7 @@ class OGServer(object):
         self.send_video_socket.close()
         self.receive_audio_socket.close()
         self.send_audio_socket.close()
-        sys.exit(EXIT)
+        # sys.exit(EXIT)
 
 
 def main():

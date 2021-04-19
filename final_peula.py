@@ -38,7 +38,7 @@ class ShowCapture(wx.Frame):
 
         btn_sizer = wx.BoxSizer(wx.HORIZONTAL)
         end_btn = wx.Button(panel, -1, 'End Call')
-        end_btn.Bind(wx.EVT_BUTTON, self.end_call)
+        end_btn.Bind(wx.EVT_BUTTON, self.end_button)
         btn_sizer.Add(end_btn, 0)
         # create image display widgets
 
