@@ -306,6 +306,7 @@ class OGClient(object):
         self.send_audio_socket.close()
         self.voice_stream.close()
         self.voice_device.terminate()
+        print("heyooooooooooooo")
 
     def close_all(self):
         """

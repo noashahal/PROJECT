@@ -80,9 +80,6 @@ class Server(object):
         when new client connects, adds to call options
         starts make call thread, which either happens or not
         """
-        # srvr_thread = threading.Thread(target=self.start_call)
-        # srvr_thread.start()
-        # self.start_call()
         done = False
         while not done:
             try:
@@ -150,7 +147,7 @@ class Server(object):
         print("answer from {}: {}".format(receiver_name, answer))
         if answer == "Y":
             self.send_mes("call".encode(), call_socket)
-            # self.start_call()
+            self.start_call()
         else:
             self.send_mes("no call".encode(), call_socket)
 
@@ -163,24 +160,13 @@ class Server(object):
         srvr.handle_clients()
 
 
-def start_call():
-    # server_backup.main()
-    # print("heyo")
-    # server_backup.start_call_og_sever()
-    srvr = server_backup.OGServer()
-    srvr.handle_clients()
-
-
 def main():
     """
     server main - receives a message returns it to client
     """
     try:
-        srvr_thread = threading.Thread(target=start_call)
-        srvr_thread.start()
         srvr = Server()
         srvr.handle_clients()
-
     except socket.error as msg:
         print("socket failure: ", msg)
     except Exception as msg:

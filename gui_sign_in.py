@@ -175,15 +175,17 @@ class GuiCallOrWait(GuiAll):
         """
         print("waiting")
         if self.client.being_called:
-            self.Close(True)
+
             self.timer.Stop()
             self.client.being_called = False  # for next call
             self.getting_called()
+            self.Close(True)
 
     def getting_called(self):
         """
         when gets a call
         """
+        # self.timer.Stop()
         person_calling = self.client.person_calling
         if win32ui.MessageBox(
                 "{} is calling you. Do you want to answer?"
